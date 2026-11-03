@@ -63,14 +63,29 @@ pi install git:github.com/Qser3ne/pi-daybreak@<完整提交哈希>
 
 ## 验证
 
+需要 Node.js >= 22.19.0。在扩展目录安装锁定的开发依赖后验证：
+
 ```bash
 cd pi-daybreak
+npm ci
 npm test
+npm run typecheck
 ```
 
-测试使用虚构凭据和模拟传输，不调用真实账号：开关、幂等性、忙碌保护、参数保留、端点隔离、分支恢复、无 TUI 模式、当前 pi-statusline 的图标/颜色/窄屏排版、Pi 内置 Codex SSE/WebSocket 序列化和授权错误不降级。
+- `npm run test:unit`：独立单元测试，无需全局安装 Pi 或状态栏，甚至无需安装开发依赖即可运行。
+- `npm run test:integration`：使用锁文件中的本地 Pi、pi-statusline 和 WebSocket 开发依赖，验证图标/颜色/窄屏排版、Codex SSE/WebSocket 序列化和授权错误不降级。
+- `npm test`：依次运行以上两组测试。
+- `npm run typecheck`：严格检查扩展 TypeScript 源码。
 
-测试默认从 `~/.local/lib/node_modules/@earendil-works/pi-coding-agent` 加载当前 Pi，可用 `PI_PACKAGE_DIR` 覆盖；状态栏测试使用当前用户安装的 `@narumitw/pi-statusline`。
+测试使用虚构凭据和模拟传输，不调用真实账号。WebSocket 测试仅监听本机回环地址。默认不读取用户全局安装路径；可显式覆盖集成测试的 Pi 或状态栏包根目录，用于兼容性验证：
+
+```bash
+PI_PACKAGE_DIR=/path/to/pi-coding-agent \
+PI_STATUSLINE_DIR=/path/to/pi-statusline \
+npm run test:integration
+```
+
+Pi 及状态栏仅为开发测试依赖；扩展运行时仍使用宿主提供的 Pi，不捆绑独立宿主运行时。
 
 ## 迁移前的历史真实验证
 
