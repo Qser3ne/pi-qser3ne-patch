@@ -24,7 +24,14 @@ const TOKEN_MARGIN_MS = 60_000;
 const DEFAULT_TIMEOUT_MS = 15_000;
 const LOGIN_ROUTE = "/api/v1/auth/login";
 
-export function readTokenCache(cachePath: string): TokenState | undefined {
+export interface TokenCacheIdentity {
+  instanceBaseUrl: string;
+  email: string;
+}
+
+const normalizeInstanceBaseUrl = (value: string): string => new URL(value.trim()).href.replace(/\/+$/, "");
+
+export function readTokenCache(cachePath: string, identity: TokenCacheIdentity): TokenState | undefined {
   let raw: unknown;
   try {
     raw = JSON.parse(readFileSync(cachePath, "utf8"));
@@ -33,13 +40,23 @@ export function readTokenCache(cachePath: string): TokenState | undefined {
   }
   if (raw === null || typeof raw !== "object") return undefined;
   const record = raw as Record<string, unknown>;
+  // Legacy, unscoped caches must never be sent to an arbitrary configured instance.
+  if (record.version !== 1 || record.instanceBaseUrl !== normalizeInstanceBaseUrl(identity.instanceBaseUrl)) return undefined;
+  if (record.email !== identity.email) return undefined;
   if (typeof record.accessToken !== "string" || record.accessToken.length === 0) return undefined;
   if (typeof record.expiresAt !== "number" || !Number.isFinite(record.expiresAt)) return undefined;
   return { accessToken: record.accessToken, expiresAt: record.expiresAt };
 }
 
-export function writeTokenCache(cachePath: string, state: TokenState): void {
-  writeFileSync(cachePath, `${JSON.stringify(state)}\n`, "utf8");
+export function writeTokenCache(cachePath: string, state: TokenState, identity: TokenCacheIdentity): void {
+  const record = {
+    version: 1,
+    instanceBaseUrl: normalizeInstanceBaseUrl(identity.instanceBaseUrl),
+    email: identity.email,
+    accessToken: state.accessToken,
+    expiresAt: state.expiresAt,
+  };
+  writeFileSync(cachePath, `${JSON.stringify(record)}\n`, { encoding: "utf8", mode: 0o600 });
   try {
     chmodSync(cachePath, 0o600);
   } catch {
@@ -134,16 +151,17 @@ export async function obtainAccessToken(options: ObtainAccessTokenOptions): Prom
     return { accessToken: settings.token, expiresAt: Number.POSITIVE_INFINITY };
   }
   const now = options.now ?? Date.now();
-  const cached = readTokenCache(options.cachePath);
-  if (cached !== undefined && cached.expiresAt - now > TOKEN_MARGIN_MS) {
-    return cached;
-  }
   if (settings.email === undefined || settings.password === undefined) {
     throw new AuthError("no credentials: set token or email+password in pi-sub2api-usage.json", "no-credentials");
   }
   const instanceBaseUrl = options.instanceBaseUrl ?? settings.baseUrl;
   if (instanceBaseUrl === undefined) {
     throw new AuthError("no baseUrl: set baseUrl in pi-sub2api-usage.json or provider baseUrl in models.json", "login-failed");
+  }
+  const identity = { instanceBaseUrl, email: settings.email };
+  const cached = readTokenCache(options.cachePath, identity);
+  if (cached !== undefined && cached.expiresAt - now > TOKEN_MARGIN_MS) {
+    return cached;
   }
   const state = await login({
     instanceBaseUrl,
@@ -153,6 +171,6 @@ export async function obtainAccessToken(options: ObtainAccessTokenOptions): Prom
     fetchImpl: options.fetchImpl,
     signal: options.signal,
   });
-  writeTokenCache(options.cachePath, state);
+  writeTokenCache(options.cachePath, state, identity);
   return state;
 }

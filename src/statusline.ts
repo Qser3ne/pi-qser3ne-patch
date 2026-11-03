@@ -43,6 +43,9 @@ interface FailureEntry {
   message: string;
 }
 
+const targetCacheKey = (target: ResolvedTarget, settings: Sub2ApiSettings): string =>
+  JSON.stringify([target.instanceBaseUrl, settings.email, target.providerId, target.accountId]);
+
 const isStaleContextError = (error: unknown): boolean => {
   const message = error instanceof Error ? error.message : String(error);
   return /stale|disposed/i.test(message);
@@ -196,7 +199,7 @@ export function createRuntime(deps: RuntimeDeps): Runtime {
     } catch (error) {
       if (gen !== generation || isStaleContextError(error)) return undefined;
       publishError(ctx, target, error);
-      recordFailure(`${target.providerId}:${target.accountId}`, errorChipText(error));
+      recordFailure(targetCacheKey(target, settings), errorChipText(error));
       scheduleRefresh(ctx, settings, gen, FAILURE_BACKOFF_MS);
       return undefined;
     }
@@ -232,7 +235,7 @@ export function createRuntime(deps: RuntimeDeps): Runtime {
     gen: number,
     force: boolean,
   ) => {
-    const cacheKey = `${target.providerId}:${target.accountId}`;
+    const cacheKey = targetCacheKey(target, settings);
     const nowMs = now();
     if (!force) {
       const cached = usageCache.get(cacheKey);
@@ -345,7 +348,7 @@ export function createRuntime(deps: RuntimeDeps): Runtime {
     try {
       const usage = await fetchWithUnauthorizedRetry(resolution, settings, token);
       if (gen !== generation) return;
-      usageCache.set(`${resolution.providerId}:${resolution.accountId}`, { usage, fetchedAt: now() });
+      usageCache.set(targetCacheKey(resolution, settings), { usage, fetchedAt: now() });
       const raw = JSON.stringify(usage, null, 2);
       safeNotify(ctx, raw.length > 1_500 ? `${raw.slice(0, 1_500)}…` : raw, "info");
       safeSetStatus(ctx, formatQuotaChip(resolution.providerId, usage, now()));

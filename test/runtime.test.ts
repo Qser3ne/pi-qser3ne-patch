@@ -178,6 +178,55 @@ test("second event within TTL re-publishes without fetching", async () => {
   fixture.cleanup();
 });
 
+test("changing instance or user bypasses both token and usage caches", async () => {
+  for (const changed of [{ baseUrl: "https://other.test" }, { email: "other@example.test" }]) {
+    const { fetchImpl, calls } = scriptedFetch([
+      loginStep("tok-old"), usageStep(), loginStep("tok-new"), usageStep(),
+    ]);
+    const fixture = makeFixture(fetchImpl);
+    const runtime = runtimeOf(fixture, fetchImpl);
+    try {
+      runtime.handleEvent(fixture.ctx as unknown as ExtensionContext, fixture.ctx.model);
+      await settle();
+      writeFileSync(join(fixture.agentDir, "pi-sub2api-usage.json"), JSON.stringify({
+        baseUrl: "http://s2a.test", email: "u@x.y", password: "pw",
+        accounts: { "sub2api-gpt": 42 }, ...changed,
+      }));
+      runtime.handleEvent(fixture.ctx as unknown as ExtensionContext, fixture.ctx.model);
+      await settle();
+      assert.equal(calls.length, 4, "new target must log in and fetch fresh usage within the old TTL");
+      assert.equal(calls[3]?.auth, "Bearer tok-new");
+      assert.ok(calls[3]?.url.startsWith(changed.baseUrl ?? "http://s2a.test"));
+    } finally {
+      runtime.shutdown(fixture.ctx as unknown as ExtensionContext);
+      fixture.cleanup();
+    }
+  }
+});
+
+test("changing instance does not inherit the previous instance's failure backoff", async () => {
+  const { fetchImpl, calls } = scriptedFetch([
+    () => jsonResponse({ code: 1, message: "invalid credentials" }),
+    loginStep("tok-new"), usageStep(),
+  ]);
+  const fixture = makeFixture(fetchImpl);
+  const runtime = runtimeOf(fixture, fetchImpl);
+  try {
+    runtime.handleEvent(fixture.ctx as unknown as ExtensionContext, fixture.ctx.model);
+    await settle();
+    writeFileSync(join(fixture.agentDir, "pi-sub2api-usage.json"), JSON.stringify({
+      baseUrl: "https://other.test", email: "u@x.y", password: "pw", accounts: { "sub2api-gpt": 42 },
+    }));
+    runtime.handleEvent(fixture.ctx as unknown as ExtensionContext, fixture.ctx.model);
+    await settle();
+    assert.equal(calls.length, 3);
+    assert.ok(fixture.ctx.ui.statuses.at(-1)?.includes("%"));
+  } finally {
+    runtime.shutdown(fixture.ctx as unknown as ExtensionContext);
+    fixture.cleanup();
+  }
+});
+
 test("switching to unmarked provider clears the chip", async () => {
   const { fetchImpl } = scriptedFetch([loginStep("tok-1"), usageStep()]);
   const fixture = makeFixture(fetchImpl);

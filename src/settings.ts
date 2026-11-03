@@ -57,7 +57,8 @@ export function normalizeSettings(raw: unknown): Sub2ApiSettings {
   return {
     baseUrl: stringOrUndefined(source.baseUrl),
     email: stringOrUndefined(source.email),
-    password: stringOrUndefined(source.password),
+    // Password whitespace is significant and must reach the login endpoint unchanged.
+    password: typeof source.password === "string" && source.password.length > 0 ? source.password : undefined,
     token: stringOrUndefined(source.token),
     route: stringOrUndefined(source.route) ?? DEFAULT_ROUTE,
     method,

@@ -26,6 +26,8 @@ const tempCachePath = (content?: string): string => {
 };
 
 const loginEnvelope = (data: unknown) => ({ code: 0, message: "success", data });
+const identity = { instanceBaseUrl: "https://example.test", email: "a@b.c" };
+const credentials = { ...identity, baseUrl: identity.instanceBaseUrl, password: "p" };
 
 test("manual token takes precedence and skips fetch", async () => {
   let calls = 0;
@@ -49,17 +51,19 @@ test("valid cached token is reused without login", async () => {
     return jsonResponse({});
   }) as unknown as typeof fetch;
   const now = 1_000_000;
-  const cachePath = tempCachePath(JSON.stringify({ accessToken: "cached", expiresAt: now + 120_000 }));
-  const state = await obtainAccessToken({ settings: normalizeSettings({}), cachePath, now, fetchImpl });
+  const cachePath = tempCachePath();
+  writeTokenCache(cachePath, { accessToken: "cached", expiresAt: now + 120_000 }, identity);
+  const state = await obtainAccessToken({ settings: normalizeSettings(credentials), cachePath, now, fetchImpl });
   assert.equal(state.accessToken, "cached");
   assert.equal(calls, 0);
 });
 
 test("cached token inside the 60s margin triggers login", async () => {
   const now = 1_000_000;
-  const cachePath = tempCachePath(JSON.stringify({ accessToken: "stale", expiresAt: now + 30_000 }));
+  const cachePath = tempCachePath();
+  writeTokenCache(cachePath, { accessToken: "stale", expiresAt: now + 30_000 }, identity);
   const state = await obtainAccessToken({
-    settings: normalizeSettings({ email: "a@b.c", password: "p", baseUrl: "http://h:8080" }),
+    settings: normalizeSettings(credentials),
     cachePath,
     now,
     fetchImpl: (async () =>
@@ -89,7 +93,7 @@ test("login happy path persists cache with mode 0600", async () => {
   assert.equal(headers["User-Agent"], "pi-sub2api-usage/0.1.0");
   assert.deepEqual(JSON.parse(calls[0]!.init.body as string), { email: "a@b.c", password: "p" });
   const persisted = JSON.parse(readFileSync(cachePath, "utf8"));
-  assert.deepEqual(persisted, { accessToken: "abc", expiresAt: now + 3_600_000 });
+  assert.deepEqual(persisted, { version: 1, ...identity, accessToken: "abc", expiresAt: now + 3_600_000 });
   assert.equal(statSync(cachePath).mode & 0o777, 0o600);
 });
 
@@ -198,18 +202,119 @@ test("missing email+password+token raises no-credentials without fetch", async (
   assert.equal(calls, 0);
 });
 
-test("readTokenCache returns undefined for garbage or missing cache", () => {
-  assert.equal(readTokenCache(tempCachePath()), undefined);
-  assert.equal(readTokenCache(tempCachePath("{nope")), undefined);
-  assert.deepEqual(readTokenCache(tempCachePath(JSON.stringify({ accessToken: "a", expiresAt: 5 }))), {
-    accessToken: "a",
-    expiresAt: 5,
-  });
+test("readTokenCache rejects missing, malformed, legacy and unknown-version caches", () => {
+  for (const content of [
+    undefined,
+    "{nope",
+    JSON.stringify({ accessToken: "legacy", expiresAt: 5 }),
+    JSON.stringify({ version: 2, ...identity, accessToken: "future", expiresAt: 5 }),
+    JSON.stringify({ version: 1, ...identity, accessToken: "", expiresAt: 5 }),
+    JSON.stringify({ version: 1, ...identity, accessToken: "bad", expiresAt: "later" }),
+  ]) {
+    const path = tempCachePath(content);
+    assert.equal(readTokenCache(path, identity), undefined);
+    rmSync(join(path, ".."), { recursive: true, force: true });
+  }
 });
 
-test("writeTokenCache writes JSON readable back", () => {
+test("writeTokenCache writes scoped JSON readable back", () => {
   const path = tempCachePath();
-  writeTokenCache(path, { accessToken: "z", expiresAt: 42 });
-  assert.deepEqual(readTokenCache(path), { accessToken: "z", expiresAt: 42 });
+  writeTokenCache(path, { accessToken: "z", expiresAt: 42 }, identity);
+  assert.deepEqual(readTokenCache(path, identity), { accessToken: "z", expiresAt: 42 });
+  assert.equal(readTokenCache(path, { ...identity, instanceBaseUrl: "https://other.test" }), undefined);
+  assert.equal(readTokenCache(path, { ...identity, email: "other@example.test" }), undefined);
   rmSync(join(path, ".."), { recursive: true, force: true });
+});
+
+test("instance, scheme, port, path and user changes require a new login", async () => {
+  for (const changed of [
+    { baseUrl: "https://other.test" },
+    { baseUrl: "http://example.test" },
+    { baseUrl: "https://example.test:8443" },
+    { baseUrl: "https://example.test/another-instance" },
+    { email: "other@example.test" },
+  ]) {
+    const cachePath = tempCachePath();
+    const now = 1_000_000;
+    writeTokenCache(cachePath, { accessToken: "old-instance-token", expiresAt: now + 120_000 }, identity);
+    let calls = 0;
+    const settings = normalizeSettings({ ...credentials, ...changed });
+    try {
+      const result = await obtainAccessToken({
+        settings, cachePath, now,
+        fetchImpl: (async (url, init) => {
+          calls++;
+          assert.equal(String(url), `${settings.baseUrl}/api/v1/auth/login`);
+          assert.equal((init?.headers as Record<string, string>).Authorization, undefined);
+          assert.equal(JSON.parse(init?.body as string).email, settings.email);
+          return jsonResponse(loginEnvelope({ access_token: "new-instance-token", expires_in: 3600 }));
+        }) as typeof fetch,
+      });
+      assert.equal(calls, 1);
+      assert.equal(result.accessToken, "new-instance-token");
+      assert.equal(readTokenCache(cachePath, identity), undefined);
+    } finally {
+      rmSync(join(cachePath, ".."), { recursive: true, force: true });
+    }
+  }
+});
+
+test("equivalent normalized instance URLs reuse the scoped token", async () => {
+  const cachePath = tempCachePath();
+  const now = 1_000_000;
+  writeTokenCache(cachePath, { accessToken: "cached", expiresAt: now + 120_000 }, identity);
+  try {
+    const result = await obtainAccessToken({
+      settings: normalizeSettings({ ...credentials, baseUrl: "https://EXAMPLE.test:443/" }),
+      cachePath, now,
+      fetchImpl: async () => { throw new Error("must not log in"); },
+    });
+    assert.equal(result.accessToken, "cached");
+  } finally {
+    rmSync(join(cachePath, ".."), { recursive: true, force: true });
+  }
+});
+
+test("legacy unscoped cache triggers login and is replaced", async () => {
+  const cachePath = tempCachePath(JSON.stringify({ accessToken: "legacy", expiresAt: 9_999_999 }));
+  try {
+    const state = await obtainAccessToken({
+      settings: normalizeSettings(credentials), cachePath, now: 1_000_000,
+      fetchImpl: (async () => jsonResponse(loginEnvelope({ access_token: "fresh", expires_in: 3600 }))) as unknown as typeof fetch,
+    });
+    assert.equal(state.accessToken, "fresh");
+    assert.equal(JSON.parse(readFileSync(cachePath, "utf8")).version, 1);
+  } finally {
+    rmSync(join(cachePath, ".."), { recursive: true, force: true });
+  }
+});
+
+test("cached tokens are not reused after credentials or base URL are removed", async () => {
+  const cachePath = tempCachePath();
+  writeTokenCache(cachePath, { accessToken: "cached", expiresAt: 9_999_999 }, identity);
+  try {
+    for (const changed of [{ email: undefined }, { password: undefined }, { baseUrl: undefined }]) {
+      await assert.rejects(obtainAccessToken({
+        settings: normalizeSettings({ ...credentials, ...changed }), cachePath, now: 1_000_000,
+        fetchImpl: async () => { throw new Error("must not fetch"); },
+      }), AuthError);
+    }
+  } finally {
+    rmSync(join(cachePath, ".."), { recursive: true, force: true });
+  }
+});
+
+test("password whitespace is sent to login unchanged", async () => {
+  const cachePath = tempCachePath();
+  try {
+    await obtainAccessToken({
+      settings: normalizeSettings({ ...credentials, password: " secret \t" }), cachePath,
+      fetchImpl: (async (_url, init) => {
+        assert.equal(JSON.parse(init?.body as string).password, " secret \t");
+        return jsonResponse(loginEnvelope({ access_token: "fresh", expires_in: 3600 }));
+      }) as typeof fetch,
+    });
+  } finally {
+    rmSync(join(cachePath, ".."), { recursive: true, force: true });
+  }
 });

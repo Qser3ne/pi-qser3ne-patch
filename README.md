@@ -25,7 +25,9 @@ Statusline preview (rendered by `@narumitw/pi-statusline`):
   "查询额度" card in the admin panel's account list. This requires an admin account.
 - Logs into the panel with your email/password to mint access tokens (cached at
   `~/.pi/agent/pi-sub2api-usage-cache.json`, mode 0600; re-login happens automatically
-  when they expire or a usage call returns 401).
+  when they expire or a usage call returns 401). The cache is bound to the normalized
+  instance URL and login email: changing either requires a new login. Legacy unscoped
+  caches are ignored and replaced after the next successful login.
 - Refreshes on session start, model switch, and turn start; while a marked provider
   stays selected it also re-queries every `refreshMs` (3 min by default),
   with a 30s failure backoff and a 60s countdown re-render.
@@ -77,7 +79,7 @@ All fields:
 | Field | Default | Meaning |
 |---|---|---|
 | `baseUrl` | derived from the provider's `baseUrl` (trailing `/v1` stripped) | sub2api instance root |
-| `email` / `password` | — | admin panel credentials for auto-login |
+| `email` / `password` | — | admin panel credentials for auto-login; password whitespace is preserved |
 | `token` | — | manual access-token override; wins over auto-login, never refreshed |
 | `route` | `/api/v1/admin/accounts/{id}/usage` | route template; `{id}` is replaced |
 | `method` | `GET` | `GET` or `POST` |

@@ -63,6 +63,15 @@ test("normalizeSettings round-trips provided values", () => {
   assert.deepEqual(s.accounts, { "sub2api-claude": 3589 });
 });
 
+test("normalizeSettings preserves password whitespace and rejects only empty or non-string passwords", () => {
+  for (const password of [" secret ", "\tpassword\n", "   "]) {
+    assert.equal(normalizeSettings({ password }).password, password);
+  }
+  for (const password of ["", null, undefined, 42]) {
+    assert.equal(normalizeSettings({ password }).password, undefined);
+  }
+});
+
 test("normalizeSettings falls back per-field on invalid values", () => {
   const s = normalizeSettings({ method: "PUT", refreshMs: "fast", route: 42, usageSource: "weird" });
   assert.equal(s.method, "GET");
