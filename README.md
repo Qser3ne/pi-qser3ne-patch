@@ -62,6 +62,51 @@ This is a project rename, not a credential or configuration migration:
 - `openai-codex` / `openai-codex-1` credentials, login display names and per-provider
   model overrides (including `contextWindow`) are unchanged.
 
+## Codex Fast mode on the second account
+
+Since 0.4.0, this package also ships a **pi-usage 0.69.0 compatibility entry**.
+It reuses the original `/fast` command and `/usage` Fast controls for both
+`openai-codex` and `openai-codex-1`; no fork, duplicate command implementation,
+or changes to the installed upstream npm files are needed.
+
+**Disable the standalone pi-usage extension entry first.** If you already have
+pi-usage in `~/.pi/agent/settings.json`, change its package declaration to:
+
+```json
+{
+  "source": "npm:@narumitw/pi-usage@0.69.0",
+  "extensions": []
+}
+```
+
+Keep your actual source/version if it differs. The package can remain installed,
+but its original extension must not also load. Then install/update
+`pi-qser3ne-patch` and run `/reload`. There should be exactly one `/fast` and
+one `/usage`, without numeric command suffixes.
+
+- Select an official Codex model under either account and run `/fast` with no
+  arguments to toggle. Fast uses more plan allowance; it is not a guaranteed
+  speedup.
+- Reuses your existing global `~/.pi/agent/pi-usage.json` `codexFastMode`
+  preference (shared between accounts, default Off); it does not reset it.
+- Queries the **selected account's** model directory and only requests
+  `service_tier: "priority"` when that account advertises support. Off,
+  unsupported or unknown routes explicitly at `"default"`.
+- No first-account token fallback. Model, origin, credentials, cancellation,
+  capability caching and Fast message-cost correction are validated separately.
+- The second account shows `⚡ fast` while effective, or `⚡ fast unknown` if
+  enabled but capability is unknown. Its existing quota chip remains independent.
+- Custom origins, native `openai`, and unrelated providers are not opted in.
+  Second-account quota still comes from this package's `/openai-usage`/chip,
+  not a new pi-usage quota adapter.
+
+The compatibility entry is pinned, not automatically upgraded with standalone
+pi-usage. See [vendor provenance and reproducible patches](vendor/pi-usage/README.md).
+To roll back, disable `vendor/pi-usage/index.ts` in this package's resource filter
+(or remove this package), restore the standalone pi-usage declaration without
+`"extensions": []`, then run `/reload`. Login credentials and preferences stay
+in place.
+
 ## Codex multi-account login
 
 The extension registers two independently authenticated Codex providers:
@@ -252,6 +297,8 @@ All fields:
 
 ## Uninstall
 
+If you disabled a standalone pi-usage entry for Fast compatibility, restore it
+before removing this package to keep `/usage` and `/fast` available.
 For a pinned installation, use the exact source (including its ref) from `pi list`.
 
 ```bash

@@ -1,0 +1,15 @@
+{
+  "package": "@narumitw/pi-usage",
+  "version": "0.69.0",
+  "source": {
+    "type": "git",
+    "url": "https://github.com/narumiruna/pi-extensions",
+    "directory": "packages/pi-usage"
+  },
+  "sha256": {
+    "index.ts": "636a9299ff7b7fd79e3c5c1373ec9c0bafbb33559f9ce78a05e87e6453e7e96b",
+    "chunks/chunk-MNR6ZE2W.ts": "f9e7736829ca731bece115db8ad4203fb053fd678603b4acce90299101dbebe5",
+    "chunks/openai-companion-auth-HDUEMR3L.ts": "9e63cc53052965fe3b554f06d247eb805a96a3646aff8425f4a53aea7c2082b7",
+    "chunks/openai-companion-usage-GI4ZWMTO.ts": "a8ee0fc3cc642f3b8389a5358fbfcfd9660c9a32629fa733d25eb19ee1c5c183"
+  }
+}

@@ -1,11 +1,11 @@
 {
   "name": "pi-qser3ne-patch",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/Qser3ne/pi-qser3ne-patch.git"
   },
-  "description": "Pi extension for independent Codex account logins and Sub2API/OpenAI quota display, compatible with pi-statusline.",
+  "description": "Personal Pi patches for independent Codex logins, Fast mode compatibility and Sub2API/OpenAI quota display.",
   "type": "module",
   "private": true,
   "keywords": [
@@ -19,23 +19,28 @@
   ],
   "pi": {
     "extensions": [
-      "./src/index.ts"
+      "./src/index.ts",
+      "./vendor/pi-usage/index.ts"
     ]
   },
   "scripts": {
     "test": "node --experimental-strip-types --test test/*.test.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "vendor:pi-usage": "node scripts/vendor-pi-usage.mjs"
   },
   "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
     "@earendil-works/pi-coding-agent": "*",
-    "@earendil-works/pi-ai": "*"
+    "@earendil-works/pi-tui": "*"
   },
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "1.1.0",
+    "@narumitw/pi-usage": "0.69.0",
     "@types/node": "^22.0.0",
     "typescript": "^5.9.0"
   },
   "dependencies": {
+    "@narumitw/pi-tui-kit": "0.68.0",
     "undici": "^7.30.1"
   }
 }

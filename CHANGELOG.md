@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.0] - 2026-11-03
+
+- Include a reproducible, MIT-attributed pi-usage 0.69.0 compatibility entry: the original `/fast` and `/usage` Fast controls now recognize `openai-codex-1`.
+- Scope OAuth readiness, candidate selection and capability discovery to the actual selected provider. Preserve standard routing when unsupported/unknown, Fast cost correction, cancellation and existing shared `pi-usage.json` preferences.
+- Add a separate second-account Fast status indicator and request-local environment-proxy support.
+- Document disabling the standalone pi-usage extension entry to avoid duplicate commands, and how to restore it. No installed upstream files or credentials are rewritten.
+- Test the real upstream Fast runtime, native alias payloads and production-only bundled loading/resource filtering.
+
 ## [0.3.0] - 2026-11-03
 
 - Rename the project, package and GitHub repository from `pi-sub2api-usage` to `pi-qser3ne-patch`; update installation instructions and HTTP User-Agent branding.
