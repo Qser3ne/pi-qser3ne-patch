@@ -46,7 +46,10 @@ test("production-only package loads through Pi's bundled loader and is selectabl
     host.initTheme("dark", false);
     let selected: string | undefined;
     const selector = new host.OAuthSelectorComponent("login", options, (id: string) => { selected = id; }, () => {}, "openai-codex-1");
-    assert.ok(!selector.render(120).join("\n").includes("No matching providers"));
+    const rendered = selector.render(120).join("\n");
+    assert.ok(!rendered.includes("No matching providers"));
+    assert.ok(rendered.includes("OpenAI Codex 1(legacy)"), "the actual login selector must show the requested display name");
+    assert.ok(!rendered.includes("account 2"));
     selector.handleInput("\r");
     assert.equal(selected, "openai-codex-1");
     assert.equal(await runtime.getAuth("openai-codex-1"), undefined);

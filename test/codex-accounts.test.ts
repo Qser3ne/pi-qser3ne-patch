@@ -54,6 +54,8 @@ test("second Codex provider mirrors the native model catalog without modifying t
   const before = native.getModels().map((model) => ({ ...model }));
   const second = createCodexAccountProvider(native);
   assert.equal(second.id, "openai-codex-1");
+  assert.equal(second.name, "OpenAI Codex 1(legacy)");
+  assert.equal(second.auth.oauth?.name, "OpenAI Codex 1(legacy)");
   assert.ok(second.auth.oauth?.isSubscription);
   assert.deepEqual(second.getModels().map((model) => model.id), native.getModels().map((model) => model.id));
   assert.ok(second.getModels().every((model) => model.provider === second.id && model.api === "openai-codex-responses"));

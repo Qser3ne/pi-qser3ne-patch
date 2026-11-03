@@ -90,11 +90,11 @@ export function createCodexAccountProvider(base: Provider<CodexApi> = nativeCode
   return {
     ...base,
     id: CODEX_ACCOUNT_PROVIDER,
-    name: "OpenAI Codex (openai-codex-1, account 2)",
+    name: "OpenAI Codex 1(legacy)",
     auth: {
       oauth: {
         ...oauth,
-        name: "OpenAI Codex — second account",
+        name: "OpenAI Codex 1(legacy)",
         async login(interaction, options) {
           interaction.notify({ type: "info", message: "Sign in with your SECOND ChatGPT account. Use a separate/private browser profile if the browser automatically selects your first account." });
           return oauth.login(interaction, options);

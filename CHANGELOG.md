@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.2.3] - 2026-11-03
+
+- Rename the second Codex account in `/login` to `OpenAI Codex 1(legacy)`; keep its `openai-codex-1` provider ID, credentials, and model settings unchanged.
+
 ## [0.2.2] - 2026-11-03
 
 - Fix quota refresh starvation during fast tool loops: repeated turn events now share the same pending account/model/session request rather than continually aborting it.

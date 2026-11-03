@@ -50,7 +50,7 @@ The extension registers two independently authenticated Codex providers:
 | Provider | Account | Credential storage key |
 |---|---|---|
 | `openai-codex` | Your existing / first account | `auth.json["openai-codex"]` |
-| `openai-codex-1` | Your second account | `auth.json["openai-codex-1"]` |
+| `openai-codex-1` | Your second account (`OpenAI Codex 1(legacy)` in `/login`) | `auth.json["openai-codex-1"]` |
 
 After installing/updating the extension, run `/reload`, then:
 
