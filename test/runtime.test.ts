@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createRuntime } from "../src/statusline.ts";
+import { createRuntime } from "../src/runtime.ts";
 import extensionDefault from "../src/index.ts";
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@earendil-works/pi-coding-agent";
 
@@ -385,7 +385,7 @@ test("shutdown clears timers and is repeatable", async () => {
   assert.equal(fixture.ctx.ui.statuses.at(-1), undefined);
   fixture.clock.advance(120_000);
   await settle();
-  assert.equal(fixture.ctx.ui.statuses.length, statusesAfterPublish + 2); // two shutdowns clear twice
+  assert.equal(fixture.ctx.ui.statuses.length, statusesAfterPublish + 1); // repeated shutdown is a no-op
   fixture.cleanup();
 });
 
@@ -418,8 +418,9 @@ test("index registers command and events on the ExtensionAPI", async () => {
   for (const name of ["session_start", "session_tree", "model_select", "turn_start", "session_shutdown"]) {
     assert.ok(events.has(name), `missing event handler for ${name}`);
   }
-  assert.equal(commands.size, 1);
+  assert.equal(commands.size, 2);
   assert.ok(commands.has("sub2api-usage"));
+  assert.ok(commands.has("openai-usage"));
   const definition = commands.get("sub2api-usage") as { handler: (args: string, ctx: unknown) => Promise<void> };
   assert.equal(typeof definition.handler, "function");
 });

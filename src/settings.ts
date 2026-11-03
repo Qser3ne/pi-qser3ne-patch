@@ -16,6 +16,8 @@ export interface Sub2ApiSettings {
   /** passive: cached/local data only; active: may query upstream. */
   usageSource: "passive" | "active";
   refreshMs: number;
+  /** Experimental native OpenAI quota via a separate, same-account Codex login. */
+  openai: { useCodex: boolean };
 }
 
 export interface ResolvedTarget {
@@ -65,6 +67,7 @@ export function normalizeSettings(raw: unknown): Sub2ApiSettings {
     accounts,
     usageSource,
     refreshMs,
+    openai: { useCodex: (source.openai as Record<string, unknown> | null)?.useCodex === true },
   };
 }
 
