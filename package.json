@@ -1,0 +1,28 @@
+{
+  "name": "pi-daybreak",
+  "version": "0.1.0",
+  "description": "Pi extension that toggles Daybreak Blue access programs on official OpenAI Responses requests.",
+  "type": "module",
+  "private": true,
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "daybreak",
+    "openai"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Qser3ne/pi-daybreak.git"
+  },
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  }
+}
