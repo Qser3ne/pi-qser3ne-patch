@@ -23,7 +23,7 @@ function fixture() {
   const timers = new Set<{ fn: () => void; due: number }>();
   const statuses: Array<string | undefined> = [];
   const notifications: Array<{ text: string; level: string }> = [];
-  const calls: Array<{ url: string; signal?: AbortSignal | null }> = [];
+  const calls: Array<{ url: string; signal?: AbortSignal | null; headers?: RequestInit["headers"] }> = [];
   let respond = async (_url: string, _init?: RequestInit) => Response.json(quota);
   const ctx = {
     model: { provider: "openai-codex", baseUrl: "https://chatgpt.com/backend-api" },
@@ -39,7 +39,7 @@ function fixture() {
   const runtime = createRuntime({
     agentDir, now: () => now,
     readCredential: (id) => credentials[id],
-    fetchImpl: (async (url, init) => { calls.push({ url: String(url), signal: init?.signal }); return respond(String(url), init); }) as typeof fetch,
+    fetchImpl: (async (url, init) => { calls.push({ url: String(url), signal: init?.signal, headers: init?.headers }); return respond(String(url), init); }) as typeof fetch,
     setTimeoutImpl: ((fn: () => void, delay: number) => {
       const timer = { fn, due: now + delay, unref: () => {} }; timers.add(timer); return timer;
     }) as unknown as typeof setTimeout,
@@ -162,6 +162,46 @@ test("switching away cancels in-flight OpenAI results and leaves pi-usage's stat
     assert.equal(f.statuses.at(-1), undefined);
     assert.equal(f.timers.size, 0);
   } finally { release(); f.close(); }
+});
+
+test("two Codex providers query different accounts and never reuse another provider's quota", async () => {
+  const f = fixture();
+  try {
+    f.credentials["openai-codex-1"] = { ...f.credentials["openai-codex"], access: jwt("account-b"), accountId: "account-b", refresh: "second-refresh" };
+    f.respond(async (_url, init) => {
+      const account = new Headers(init?.headers).get("ChatGPT-Account-Id");
+      return Response.json({ rate_limit: { primary_window: { ...quota.rate_limit.primary_window, used_percent: account === "account-b" ? 80 : 23 } } });
+    });
+    f.event(); await settle();
+    assert.match(f.statuses.at(-1)!, /openai-codex 5h 77%/);
+    f.ctx.model.provider = "openai-codex-1";
+    f.event(); await settle();
+    assert.match(f.statuses.at(-1)!, /openai-codex-1 5h 20%/);
+    assert.equal(new Headers(f.calls[1].headers).get("ChatGPT-Account-Id"), "account-b");
+    assert.equal(new Headers(f.calls[1].headers).get("Authorization"), `Bearer ${jwt("account-b")}`);
+    f.ctx.model.provider = "openai-codex";
+    f.event(); await settle();
+    assert.match(f.statuses.at(-1)!, /openai-codex 5h 77%/);
+    assert.equal(new Headers(f.calls.at(-1)?.headers).get("ChatGPT-Account-Id"), "account-a");
+  } finally { f.close(); }
+});
+
+test("missing second-account login never falls back to the first; 401 names the correct login", async () => {
+  const f = fixture();
+  try {
+    f.ctx.model.provider = "openai-codex-1";
+    f.event(); await settle();
+    assert.equal(f.calls.length, 0);
+    assert.match(f.statuses.at(-1)!, /error:.*openai-codex-1 login/);
+    f.credentials["openai-codex-1"] = { ...f.credentials["openai-codex"], access: jwt("account-b"), accountId: "account-b" };
+    f.respond(async () => new Response("", { status: 401 }));
+    await f.manual();
+    assert.match(f.statuses.at(-1)!, /reconnect with \/login openai-codex-1/);
+    f.ctx.model.provider = "openai-codex";
+    f.respond(async () => Response.json(quota));
+    f.event(); await settle();
+    assert.match(f.statuses.at(-1)!, /openai-codex 5h 77%/);
+  } finally { f.close(); }
 });
 
 test("shutdown aborts requests, clears timers, and repeated shutdown is harmless", async () => {

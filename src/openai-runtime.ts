@@ -145,7 +145,7 @@ export function createOpenAIRuntime(deps: OpenAIRuntimeDeps): Runtime {
   };
   const runManualCheck = async (ctx: ExtensionCommandContext) => {
     if (!isOpenAIProvider(ctx.model?.provider)) {
-      notify(ctx, "Select a native openai or openai-codex model first.", "info");
+      notify(ctx, "Select an openai-codex or openai-codex-1 model first.", "info");
       return;
     }
     await check(ctx, ctx.model.provider, true);

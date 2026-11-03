@@ -6,9 +6,12 @@ import { formatCountdown, truncateChip } from "./format.ts";
 
 export const OPENAI_USAGE_URL = "https://chatgpt.com/backend-api/wham/usage";
 export const OPENAI_MANAGE_USAGE_URL = "https://chatgpt.com/settings/usage";
-export type OpenAIProvider = "openai" | "openai-codex";
+export type CodexProvider = "openai-codex" | "openai-codex-1";
+export type OpenAIProvider = "openai" | CodexProvider;
+export const isCodexProvider = (id: string | undefined): id is CodexProvider =>
+  id === "openai-codex" || id === "openai-codex-1";
 export const isOpenAIProvider = (id: string | undefined): id is OpenAIProvider =>
-  id === "openai" || id === "openai-codex";
+  id === "openai" || isCodexProvider(id);
 
 export interface OpenAIWindow {
   usedPercent: number;
@@ -23,6 +26,7 @@ export interface OpenAIAuth {
   fingerprint: string;
   headers?: Record<string, string>;
   clientId?: string;
+  loginProvider?: CodexProvider;
 }
 export interface OpenAIAuthOptions {
   agentDir: string;
@@ -87,7 +91,8 @@ export async function resolveOpenAIAuth(
       return { fingerprint: hash([provider, native.access, clientId]) };
     }
   }
-  const codex = provider === "openai-codex" ? native : await resolve("openai-codex");
+  const codexProvider = isCodexProvider(provider) ? provider : "openai-codex";
+  const codex = isCodexProvider(provider) ? native : await resolve(codexProvider);
   let accountId: unknown;
   try {
     const parts = codex.access.split(".");
@@ -102,6 +107,7 @@ export async function resolveOpenAIAuth(
     fingerprint: hash([provider, native.access, codex.access, accountId, clientId]),
     headers: { Authorization: `Bearer ${codex.access}`, "ChatGPT-Account-Id": accountId },
     clientId,
+    loginProvider: codexProvider,
   };
 }
 
@@ -180,7 +186,7 @@ export async function fetchOpenAIUsage(options: {
       method: "GET", redirect: "error", signal,
       headers: { ...auth.headers, Accept: "application/json", "User-Agent": "pi-sub2api-usage" },
     });
-    if (!response.ok) return fail(`OpenAI usage HTTP ${response.status}${response.status === 401 ? "; reconnect with /login openai-codex" : ""}`);
+    if (!response.ok) return fail(`OpenAI usage HTTP ${response.status}${response.status === 401 ? `; reconnect with /login ${auth.loginProvider ?? "openai-codex"}` : ""}`);
     const payload: unknown = await response.json();
     signal.throwIfAborted();
     await options.guard();

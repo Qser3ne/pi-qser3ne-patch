@@ -43,16 +43,58 @@ Statusline preview (rendered by `@narumitw/pi-statusline`):
 pi install /path/to/pi-sub2api-usage
 ```
 
-## Native OpenAI / Codex
+## Codex multi-account login
+
+The extension registers two independently authenticated Codex providers:
+
+| Provider | Account | Credential storage key |
+|---|---|---|
+| `openai-codex` | Your existing / first account | `auth.json["openai-codex"]` |
+| `openai-codex-1` | Your second account | `auth.json["openai-codex-1"]` |
+
+After installing/updating the extension, run `/reload`, then:
+
+1. Keep your existing `/login openai-codex` login (no migration is needed).
+2. Run `/login openai-codex-1` and sign in with your **second ChatGPT account**.
+   Pi offers its native browser and device-code methods. If the browser selects
+   the first account automatically, open the authorization URL in a separate or
+   private browser profile and choose the second account.
+3. Use `/model` to select the same model under either provider, for example
+   `openai-codex/<model-id>` or `openai-codex-1/<model-id>`.
+4. Run `/openai-usage` to refresh the selected account's quota.
+
+```text
+📊 openai-codex 7d 29% ↻ 3d4h
+📊 openai-codex-1 5h 81% ↻ 2h15m 7d 63% ↻ 5d1h
+```
+
+Only the currently selected provider's quota is shown. Logging in, refreshing
+credentials, or logging out of one provider does not change the other provider.
+There is no automatic fallback, account rotation, or credential copying. Before
+logging in, the second provider has no usable credentials and its models may be
+absent from the available-model picker. `/logout openai-codex-1` only removes the
+second account (or select it in `/logout` if your Pi version uses a picker).
+
+Both accounts use the host Pi version's built-in Codex model catalog and streaming
+implementation. The extension registers a separate native provider for the second
+account; no `models.json` entry or extra API key is required. Optional overrides
+for the second account belong under `providers["openai-codex-1"]` in `models.json`.
+During account handoff, tool-call IDs remain valid and encrypted reasoning from
+the other account is not replayed as if it came from the selected account.
+
+The original `openai-codex` provider and existing credentials are not replaced.
+The unrelated native `openai` login is not used for this dual-account setup.
+
+## Native OpenAI / Codex quota
 
 Native providers are recognized automatically; no `"sub2api": true`, admin
 credentials, or account-ID mapping is needed. Existing Sub2API configuration
 continues to work unchanged.
 
-### `openai-codex`
+### `openai-codex` / `openai-codex-1`
 
-1. Sign in using `/login openai-codex`.
-2. Select a native `openai-codex` model.
+1. Sign in using `/login openai-codex` or `/login openai-codex-1`.
+2. Select a model under the corresponding provider.
 3. The statusline shows **remaining** quota and reset countdowns, for example:
 
 ```
@@ -180,7 +222,8 @@ All fields:
 
 - `/sub2api-usage` — force-refreshes and prints parsed quota for the current
   Sub2API or native OpenAI/Codex provider (backward-compatible command).
-- `/openai-usage` — force-refreshes native OpenAI/Codex quota, or explains the
+- `/openai-usage` — force-refreshes the selected Codex account (including
+  `openai-codex-1`) or native OpenAI quota, or explains the
   required login/companion configuration. Select a native provider first.
 
 ## Uninstall

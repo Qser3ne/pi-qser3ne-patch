@@ -1,10 +1,12 @@
 import { type ExtensionAPI, getAgentDir } from "@earendil-works/pi-coding-agent";
 import { createRuntime } from "./runtime.ts";
 import { isOpenAIProvider } from "./openai.ts";
+import { createCodexAccountProvider } from "./codex-accounts.ts";
 
 export { createRuntime } from "./runtime.ts";
 
 export default function sub2apiUsageExtension(pi: ExtensionAPI): void {
+  pi.registerProvider(createCodexAccountProvider());
   const runtime = createRuntime({ agentDir: getAgentDir() });
   pi.on("session_start", (_event, ctx) => runtime.handleEvent(ctx, ctx.model));
   pi.on("session_tree", (_event, ctx) => runtime.handleEvent(ctx, ctx.model));
@@ -21,7 +23,7 @@ export default function sub2apiUsageExtension(pi: ExtensionAPI): void {
     description: "Force-refresh native OpenAI/Codex subscription quota",
     handler: async (_args, ctx) => {
       if (!isOpenAIProvider(ctx.model?.provider)) {
-        ctx.ui.notify("Select a native openai or openai-codex model first.", "info");
+        ctx.ui.notify("Select an openai-codex or openai-codex-1 model first.", "info");
         return;
       }
       await runtime.runManualCheck(ctx);

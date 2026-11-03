@@ -406,7 +406,9 @@ test("runManualCheck forces a query and notifies raw JSON", async () => {
 test("index registers command and events on the ExtensionAPI", async () => {
   const events = new Map<string, (event: unknown, ctx: unknown) => void | Promise<void>>();
   const commands = new Map<string, unknown>();
+  const providers: Array<{ id: string }> = [];
   const pi = {
+    registerProvider: (provider: { id: string }) => { providers.push(provider); },
     on: (name: string, callback: (event: unknown, ctx: unknown) => void | Promise<void>) => {
       events.set(name, callback);
     },
@@ -415,6 +417,7 @@ test("index registers command and events on the ExtensionAPI", async () => {
     },
   } as unknown as ExtensionAPI;
   extensionDefault(pi);
+  assert.deepEqual(providers.map((provider) => provider.id), ["openai-codex-1"]);
   for (const name of ["session_start", "session_tree", "model_select", "turn_start", "session_shutdown"]) {
     assert.ok(events.has(name), `missing event handler for ${name}`);
   }
