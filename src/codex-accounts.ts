@@ -3,7 +3,7 @@ import {
   type AssistantMessage, type AssistantMessageEventStream, type Message,
   type Model, type Provider, type StreamOptions, type TranscriptContext,
 } from "@earendil-works/pi-ai";
-import { openaiCodexProvider } from "@earendil-works/pi-ai/providers/openai-codex";
+import { builtinProviders } from "@earendil-works/pi-ai/providers/all";
 
 export const CODEX_ACCOUNT_PROVIDER = "openai-codex-1";
 type CodexApi = "openai-codex-responses";
@@ -71,11 +71,20 @@ function accountStream(inner: AssistantMessageEventStream, model: Model<CodexApi
   return output;
 }
 
+function nativeCodexProvider(): Provider<CodexApi> {
+  // Only the providers/all entrypoint is exposed by Pi's bundled loader.
+  // Importing providers/openai-codex works in a dev tree but fails in an
+  // installed package with host-provided peers.
+  const provider = builtinProviders().find((candidate) => candidate.id === NATIVE_PROVIDER);
+  if (!provider) throw new Error("Native Codex provider is unavailable in this Pi version");
+  return provider as Provider<CodexApi>;
+}
+
 /**
  * A complete native provider, not an alias that resolves auth through the first
  * account. Pi owns login/refresh/logout and stores credentials under this ID.
  */
-export function createCodexAccountProvider(base: Provider<CodexApi> = openaiCodexProvider()): Provider<CodexApi> {
+export function createCodexAccountProvider(base: Provider<CodexApi> = nativeCodexProvider()): Provider<CodexApi> {
   const oauth = base.auth.oauth;
   if (!oauth) throw new Error("Native Codex OAuth support is required");
   return {

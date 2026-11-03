@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.2.1] - 2026-11-03
+
+- Fix the second Codex account failing to appear in `/login` in Pi's bundled production runtime. Import the native provider through the supported `@earendil-works/pi-ai/providers/all` entrypoint instead of a development-only provider subpath.
+- Add a production-only sandbox regression test using Pi's actual bundled extension loader, login provider enumeration, exact-ID lookup, and login selector rendering/selection.
+
 ## [0.2.0] - 2026-11-03
 
 - Add `openai-codex-1` as a second, independently authenticated Codex account.
