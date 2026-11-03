@@ -1,76 +1,40 @@
 # pi-qser3ne-patch
 
-A [pi](https://github.com/earendil-works/pi-coding-agent) extension that shows your
-[sub2api](https://github.com/Wei-Shaw/sub2api) upstream account quota and native
-OpenAI/Codex subscription quota in the statusline. Compatible with
-`@narumitw/pi-statusline` through Pi's standard `ctx.ui.setStatus()` API;
-no custom footer or dependency on pi-statusline internals is required.
+个人 Pi 扩展补丁集，原名 `pi-sub2api-usage`。当前主要提供 **Codex 双账号、Fast 兼容及订阅额度显示**。
 
-Statusline preview (rendered by `@narumitw/pi-statusline`):
+## 已实现功能
 
+| 功能 | 说明 |
+| --- | --- |
+| Codex 双账号 | 保留原生 `openai-codex`，新增 `openai-codex-1`，登录名为 `OpenAI Codex 1(legacy)`。复用 Pi 原生 OAuth、模型目录及流式请求实现。 |
+| 账号隔离 | 两账号独立登录、刷新、退出和查询额度；不复制凭据、不回退到另一账号，也不自动轮换账号。切换时保留有效工具调用 ID，隔离跨账号的加密推理。 |
+| Fast 模式 | 内置 pi-usage **0.69.0 兼容入口**，原 `/fast` 及 `/usage` Fast 控件支持两个 Codex 账号；保留 Fast 费用估算修正。 |
+| Codex 额度 | 使用当前账号 OAuth 查询剩余额度和重置倒计时；按服务端实际窗口显示，不假设所有套餐都有 5 小时限制。不是 API 账单或会话 token 计数。 |
+| Sub2API 额度 | 查询管理员账号用量接口；支持邮箱/密码自动登录、令牌缓存、过期或 401 后重新登录，以及手动 token。 |
+| 状态栏 | 通过 `ctx.ui.setStatus()` 兼容 pi-statusline，不替换 footer；额度使用 `sub2api-usage` key，不覆盖 pi-usage 的 `usage`。 |
+| 刷新与安全 | 额度默认每 3 分钟刷新，失败退避 30 秒，倒计时每分钟更新；原生额度合并重复刷新、校验当前认证，切换或关闭时取消旧请求。原生额度与兼容入口请求支持环境代理和 15 秒超时。 |
+
+```text
+📊 openai-codex-1 5h 81% ↻ 2h15m 7d 63% ↻ 5d1h
+⚡ fast
 ```
-📊 sub2api-claude 86% ↻ 4h12m 74% ↻ 3d13h
-```
 
-- `86% ↻ 4h12m` — 5-hour window REMAINING, resetting in 4h12m
-- `74% ↻ 3d13h` — 7-day window REMAINING, resetting in 3d13h
+百分比表示**剩余**额度。第二账号 Fast 指示使用独立的 `qser3ne-codex-fast` key；能力未确认时显示 `⚡ fast unknown`。
 
-(Percentages show remaining quota, matching pi-usage's codex-style default.)
+## 安装
 
-## How it works
-
-- Reads `~/.pi/agent/models.json` and reacts to providers marked with `"sub2api": true`.
-- The provider's quota comes from the sub2api **admin account-usage endpoint**
-  (`GET /api/v1/admin/accounts/{id}/usage`), i.e. the same numbers as the
-  "查询额度" card in the admin panel's account list. This requires an admin account.
-- Logs into the panel with your email/password to mint access tokens (cached at
-  `~/.pi/agent/pi-sub2api-usage-cache.json`, mode 0600; re-login happens automatically
-  when they expire or a usage call returns 401). The cache is bound to the normalized
-  instance URL and login email: changing either requires a new login. Legacy unscoped
-  caches are ignored and replaced after the next successful login.
-- Refreshes on session start, model switch, and turn start; while a marked provider
-  stays selected it also re-queries every `refreshMs` (3 min by default),
-  with a 30s failure backoff and a 60s countdown re-render.
-- By default queries `source=passive` (locally recorded data, no upstream round-trip);
-  set `"usageSource": "active"` to query upstream on every refresh instead.
-- Publishes under its own status key `sub2api-usage`, without overwriting pi-usage's
-  `usage` key. If both extensions query OpenAI/Codex, both may display a quota chip;
-  disable that provider's display in pi-usage if you only want one.
-
-## Install
+已有独立 pi-usage 或旧名扩展时，先按下文处理重复加载，再安装并重载。
 
 ```bash
 pi install git:github.com/Qser3ne/pi-qser3ne-patch
 ```
 
-For development, use `pi install /path/to/pi-qser3ne-patch` instead.
+安装后执行 `/reload`。需要固定版本时，在 Git 来源后追加 `@<commit>`。
 
-### Renamed from `pi-sub2api-usage`
+**避免重复加载：**
 
-The package and repository are now `pi-qser3ne-patch`. To migrate an existing
-installation, remove the old Git source (use its exact source from `pi list`,
-including any pinned commit), then install the new source shown above and run
-`/reload`. Do not keep both sources installed: they register the same provider
-and commands.
-
-This is a project rename, not a credential or configuration migration:
-
-- Settings remain at `~/.pi/agent/pi-sub2api-usage.json` and the Sub2API token
-  cache remains at `~/.pi/agent/pi-sub2api-usage-cache.json`; no file renaming or
-  copying is required. Historical design/plan documents retain the old name.
-- `/sub2api-usage`, `/openai-usage`, and the `sub2api-usage` status key are unchanged.
-- `openai-codex` / `openai-codex-1` credentials, login display names and per-provider
-  model overrides (including `contextWindow`) are unchanged.
-
-## Codex Fast mode on the second account
-
-Since 0.4.0, this package also ships a **pi-usage 0.69.0 compatibility entry**.
-It reuses the original `/fast` command and `/usage` Fast controls for both
-`openai-codex` and `openai-codex-1`; no fork, duplicate command implementation,
-or changes to the installed upstream npm files are needed.
-
-**Disable the standalone pi-usage extension entry first.** If you already have
-pi-usage in `~/.pi/agent/settings.json`, change its package declaration to:
+- 旧名 `pi-sub2api-usage` 与新包不能同时安装；使用 `pi list` 找到旧来源并移除。
+- 若已安装独立 pi-usage，将 `~/.pi/agent/settings.json` 中对应包改为下面的形式，保留实际版本，仅禁用其扩展入口：
 
 ```json
 {
@@ -79,228 +43,77 @@ pi-usage in `~/.pi/agent/settings.json`, change its package declaration to:
 }
 ```
 
-Keep your actual source/version if it differs. The package can remain installed,
-but its original extension must not also load. Then install/update
-`pi-qser3ne-patch` and run `/reload`. There should be exactly one `/fast` and
-one `/usage`, without numeric command suffixes.
+本包提供兼容入口，无需修改原 npm 文件或另建 fork。加载后应只有一个 `/fast` 和 `/usage`，没有数字后缀。兼容入口随本包维护，不会跟随独立 pi-usage 自动升级。
 
-- Select an official Codex model under either account and run `/fast` with no
-  arguments to toggle. Fast uses more plan allowance; it is not a guaranteed
-  speedup.
-- Reuses your existing global `~/.pi/agent/pi-usage.json` `codexFastMode`
-  preference (shared between accounts, default Off); it does not reset it.
-- Queries the **selected account's** model directory and only requests
-  `service_tier: "priority"` when that account advertises support. Off,
-  unsupported or unknown routes explicitly at `"default"`.
-- No first-account token fallback. Model, origin, credentials, cancellation,
-  capability caching and Fast message-cost correction are validated separately.
-- The second account shows `⚡ fast` while effective, or `⚡ fast unknown` if
-  enabled but capability is unknown. Its existing quota chip remains independent.
-- Custom origins, native `openai`, and unrelated providers are not opted in.
-  Second-account quota still comes from this package's `/openai-usage`/chip,
-  not a new pi-usage quota adapter.
+## Codex 使用
 
-The compatibility entry is pinned, not automatically upgraded with standalone
-pi-usage. See [vendor provenance and reproducible patches](vendor/pi-usage/README.md).
-To roll back, disable `vendor/pi-usage/index.ts` in this package's resource filter
-(or remove this package), restore the standalone pi-usage declaration without
-`"extensions": []`, then run `/reload`. Login credentials and preferences stay
-in place.
+1. 原账号继续使用 `/login openai-codex`，无需迁移。
+2. 执行 `/login openai-codex-1` 登录第二账号；建议使用独立或无痕浏览器，避免选错账号。
+3. 用 `/model` 选择对应提供商下的模型，再运行以下命令。
 
-## Codex multi-account login
+| 命令 | 功能 |
+| --- | --- |
+| `/openai-usage` | 强制刷新当前原生 OpenAI/Codex 额度或提示所需配置。 |
+| `/sub2api-usage` | 强制刷新当前 Sub2API 或原生 OpenAI/Codex 额度，保留旧命令兼容。 |
+| `/fast` | 无参数切换 Fast，仅对官方 Codex Responses 端点及支持的模型生效。 |
+| `/usage` | pi-usage 原有用量界面及 Fast 控件；第二账号额度仍由本包的 `/openai-usage` 和状态栏提供。 |
 
-The extension registers two independently authenticated Codex providers:
+Fast 根据**当前账号**的模型目录确认能力：开启且支持时请求 `service_tier: "priority"`，否则使用 `"default"`；不扩展到原生 `openai` 或自定义代理端点。Fast 消耗更多套餐额度，不保证实际提速。
 
-| Provider | Account | Credential storage key |
-|---|---|---|
-| `openai-codex` | Your existing / first account | `auth.json["openai-codex"]` |
-| `openai-codex-1` | Your second account (`OpenAI Codex 1(legacy)` in `/login`) | `auth.json["openai-codex-1"]` |
+Fast 开关沿用 `~/.pi/agent/pi-usage.json` 的 `codexFastMode`，默认关闭、两账号共享；账号凭据和能力缓存仍独立。
 
-After installing/updating the extension, run `/reload`, then:
+### 模型覆盖（可选）
 
-1. Keep your existing `/login openai-codex` login (no migration is needed).
-2. Run `/login openai-codex-1` and sign in with your **second ChatGPT account**.
-   Pi offers its native browser and device-code methods. If the browser selects
-   the first account automatically, open the authorization URL in a separate or
-   private browser profile and choose the second account.
-3. Use `/model` to select the same model under either provider, for example
-   `openai-codex/<model-id>` or `openai-codex-1/<model-id>`.
-4. Run `/openai-usage` to refresh the selected account's quota.
-
-```text
-📊 openai-codex 7d 29% ↻ 3d4h
-📊 openai-codex-1 5h 81% ↻ 2h15m 7d 63% ↻ 5d1h
-```
-
-Only the currently selected provider's quota is shown. Logging in, refreshing
-credentials, or logging out of one provider does not change the other provider.
-There is no automatic fallback, account rotation, or credential copying. Before
-logging in, the second provider has no usable credentials and its models may be
-absent from the available-model picker. `/logout openai-codex-1` only removes the
-second account (or select it in `/logout` if your Pi version uses a picker).
-
-Both accounts use the host Pi version's built-in Codex model catalog and streaming
-implementation. The extension registers a separate native provider for the second
-account; no `models.json` entry or extra API key is required. Optional overrides
-for the second account belong under `providers["openai-codex-1"]` in `models.json`.
-Overrides on `openai-codex` (for example a reduced `contextWindow`) are intentionally
-not copied to the second account. Configure both entries explicitly if you want
-the same context/compaction threshold for both providers.
-During account handoff, tool-call IDs remain valid and encrypted reasoning from
-the other account is not replayed as if it came from the selected account.
-
-The original `openai-codex` provider and existing credentials are not replaced.
-The unrelated native `openai` login is not used for this dual-account setup.
-
-## Native OpenAI / Codex quota
-
-Native providers are recognized automatically; no `"sub2api": true`, admin
-credentials, or account-ID mapping is needed. Existing Sub2API configuration
-continues to work unchanged.
-
-### `openai-codex` / `openai-codex-1`
-
-1. Sign in using `/login openai-codex` or `/login openai-codex-1`.
-2. Select a model under the corresponding provider.
-3. The statusline shows **remaining** quota and reset countdowns, for example:
-
-```
-📊 openai-codex 5h 77% ↻ 1h0m 7d 60% ↻ 3d5h
-```
-
-Actual window lengths come from the response (a weekly-only plan is not shown
-as a 5-hour limit). `/openai-usage` forces a refresh and displays parsed quota.
-API keys are not subscription logins and are explicitly rejected. This is not
-OpenAI API billing, prepaid balance, or a per-session token counter.
-
-### `openai` (native Sign in with ChatGPT)
-
-The new native OAuth grant is for `api.openai.com`, **not** the legacy ChatGPT
-backend. There is no supported numerical quota API for that grant. By default
-this extension reports `ChatGPT connected; quota needs Codex companion` and
-never sends its direct-use token to the Codex endpoint.
-
-For **experimental numerical usage**, sign in with both `/login openai` and
-`/login openai-codex`, using the **same ChatGPT account and workspace**, then
-merge this option into `~/.pi/agent/pi-sub2api-usage.json`:
+模型默认沿用 Pi 内置目录，两个提供商的 `models.json` 覆盖**互不继承**。例如，将两账号的 `gpt-6.1-sol` 都设为 272K：
 
 ```json
 {
-  "openai": { "useCodex": true }
+  "providers": {
+    "openai-codex": {
+      "modelOverrides": { "gpt-6.1-sol": { "contextWindow": 272000 } }
+    },
+    "openai-codex-1": {
+      "modelOverrides": { "gpt-6.1-sol": { "contextWindow": 272000 } }
+    }
+  }
 }
 ```
 
-Select an `openai` model and run `/openai-usage` (or wait for the next refresh):
+将示例合并到现有 `~/.pi/agent/models.json`，不要覆盖其他提供商；其他模型按需分别添加。**272K 是可选配置，不是扩展默认值。**
 
-```
-📊 openai plan 5h 77% ↻ 1h0m 7d 60% ↻ 3d5h app 5h 80% ↻ 1h0m
-```
+## Sub2API 配置（可选）
 
-- Only the companion **Codex** token is sent to the undocumented
-  `https://chatgpt.com/backend-api/wham/usage` and `/chatpass/apps` endpoints.
-- The app registration must uniquely match the native OAuth `clientId`. App
-  registration matching is **not independent proof** of the same user/workspace;
-  the operator must ensure both logins match.
-- Plan and app limits are shown separately. `allowed_usage_percent` is not
-  remaining quota. Missing/duplicate registrations, pagination, invalid windows,
-  or unavailable app data cause an explicit error: Codex-only quota is never
-  silently substituted for native OpenAI usage. If the app is absent, no numerical
-  app quota is available from this source; check ChatGPT usage settings.
-- Manage the authoritative limits at <https://chatgpt.com/settings/usage>.
-  The backend is undocumented and can change without notice.
-
-### Refresh, authentication and statusline behavior
-
-- Uses Pi's freshly resolved runtime OAuth (Pi owns token refresh); verifies that
-  stored credentials and selected model authorization match. Custom inference
-  endpoints/authorization overrides are rejected rather than shown as native.
-- OAuth tokens are never copied to the Sub2API token cache or included in UI
-  output. A changed login invalidates the in-memory quota cache.
-- Refreshes at session start, model switch, turn start and every `refreshMs`
-  (default 3 minutes). Failure backoff is 30 seconds; countdowns update every
-  minute. Repeated turn events share a pending request for the same account/model/
-  session, so fast tool loops cannot repeatedly abort a slow quota request. Manual
-  refresh bypasses cache/backoff and keeps automatic refresh alive.
-- Requests support `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` (including lowercase
-  forms), reject redirects and have a 15-second request/body timeout. Switching
-  providers or shutting down cancels pending requests and timers.
-- Uses the same `sub2api-usage` status key as existing Sub2API chips, with exactly
-  one source active at a time. pi-statusline renders it as a normal extension
-  status. Ensure extension statuses are visible in your statusline settings.
-- Custom credential stores/profiles that cannot be matched to the active
-  `auth.json` entry fail closed instead of guessing a different account.
-
-References: [OpenAI token reference](https://developers.openai.com/siwc/token-sharing-open-source/token-reference),
-[ChatGPT plan UX guidance](https://developers.openai.com/siwc/ui-ux-guidelines).
-
-## Configure Sub2API
-
-### 1. Mark providers in `~/.pi/agent/models.json`
-
-```json
-"sub2api-claude": {
-  "baseUrl": "http://your-instance:8080",
-  "api": "anthropic-messages",
-  "sub2api": true,
-  "models": [ ... ]
-}
-```
-
-> The account must be a subscription (OAuth) account — API-key relay accounts have no
-> quota windows and the usage endpoint returns an error for them.
-
-### 2. Create `~/.pi/agent/pi-sub2api-usage.json`
+在 `models.json` 对应提供商中加入 `"sub2api": true`，并创建 `~/.pi/agent/pi-sub2api-usage.json`：
 
 ```json
 {
-  "baseUrl": "http://your-instance:8080",
+  "baseUrl": "https://your-sub2api-instance",
   "email": "admin@example.com",
   "password": "your-panel-password",
   "accounts": { "sub2api-claude": 3589 }
 }
 ```
 
-The number is the account id shown in the admin panel's account list. Then:
+`accounts` 将提供商 ID 映射到后台账号 ID；需要管理员权限及具有额度窗口的订阅账号。配置文件应执行 `chmod 600`，不要提交真实凭据。
+
+可选项：`token` 优先于自动登录；`route` 默认 `/api/v1/admin/accounts/{id}/usage`；`method` 默认 `GET`；`refreshMs` 默认 `180000`；`usageSource` 默认 `passive`，设为 `active` 才会查询上游。验证码或 TOTP 不能自动处理，请改用手动 token。
+
+## 配置兼容与限制
+
+- 改名后保留 `pi-sub2api-usage.json` 配置文件及 `pi-sub2api-usage-cache.json` 缓存文件名；缓存权限为 `0600`，绑定实例与登录邮箱，不保存 Codex OAuth。
+- 两账号凭据仍分别存放于 Pi 的 `auth.json["openai-codex"]` 和 `auth.json["openai-codex-1"]`；不修改原账号或个人模型覆盖。
+- 原生 `openai` 默认只显示 ChatGPT 连接状态，没有受支持的数值额度 API。实验性 `"openai": { "useCodex": true }` 需手动确认同账号/工作区的 Codex companion，且应用注册唯一匹配原生 OAuth `clientId`；套餐与应用额度分开显示，不能验证时不冒充原生额度。
+- Codex 额度与能力依赖未公开的 ChatGPT 后端，接口可能变化；自定义端点、无法匹配的认证或缺失凭据会明确失败，不猜测其他账号。
+- 若原账号出现重复额度 chip，可关闭 pi-usage 对应显示；本包不会覆盖它的状态 key。
+
+## 开发与卸载
 
 ```bash
-chmod 600 ~/.pi/agent/pi-sub2api-usage.json
+npm ci
+npm run typecheck
+npm test
 ```
 
-All fields:
+pi-usage 兼容入口的来源、MIT 许可及再生方法见 [vendor/pi-usage/README.md](vendor/pi-usage/README.md)；版本记录见 [CHANGELOG.md](CHANGELOG.md)。
 
-| Field | Default | Meaning |
-|---|---|---|
-| `baseUrl` | derived from the provider's `baseUrl` (trailing `/v1` stripped) | sub2api instance root |
-| `email` / `password` | — | admin panel credentials for auto-login; password whitespace is preserved |
-| `token` | — | manual access-token override; wins over auto-login, never refreshed |
-| `route` | `/api/v1/admin/accounts/{id}/usage` | route template; `{id}` is replaced |
-| `method` | `GET` | `GET` or `POST` |
-| `usageSource` | `passive` | `passive` (cached) or `active` (upstream query) |
-| `accounts` | `{}` | `providerId → account id` mapping |
-| `refreshMs` | `180000` | usage cache TTL / refresh interval for Sub2API and native OpenAI |
-| `openai.useCodex` | `false` | experimental native `openai` quota via a separate same-account Codex OAuth login |
-
-## Preconditions
-
-- Panel account with admin role (the usage endpoint is admin-only).
-- The instance must not require a login captcha (Turnstile / Tencent), and the
-  account must not have TOTP 2FA enabled — auto-login cannot pass either. With
-  captcha/2FA, use the manual `token` field instead (paste a fresh panel JWT).
-
-## Command
-
-- `/sub2api-usage` — force-refreshes and prints parsed quota for the current
-  Sub2API or native OpenAI/Codex provider (backward-compatible command).
-- `/openai-usage` — force-refreshes the selected Codex account (including
-  `openai-codex-1`) or native OpenAI quota, or explains the
-  required login/companion configuration. Select a native provider first.
-
-## Uninstall
-
-If you disabled a standalone pi-usage entry for Fast compatibility, restore it
-before removing this package to keep `/usage` and `/fast` available.
-For a pinned installation, use the exact source (including its ref) from `pi list`.
-
-```bash
-pi remove git:github.com/Qser3ne/pi-qser3ne-patch
-```
+卸载时使用 `pi remove <pi list 中的完整来源>`。如要保留原 pi-usage，请恢复其独立扩展入口；也可仅禁用本包的 `vendor/pi-usage/index.ts` 入口，再执行 `/reload`。凭据和偏好无需迁移。
