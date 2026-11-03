@@ -1790,7 +1790,8 @@ function registerCodexFastMode(pi, settingsRuntime, refreshStatus, options = {})
     pi.on("session_start", async (_event, ctx) => prepareSession(ctx));
   }
   pi.on("model_select", (_event, ctx) => {
-    publishAliasFastStatus(ctx);
+    // Do not display the previous account's cached entitlement during auth resolution.
+    ctx.ui.setStatus("qser3ne-codex-fast", ctx.model?.provider === "openai-codex-1" && settingsRuntime.get().settings.codexFastMode ? "⚡ fast unknown" : undefined);
     void refreshCapabilities(ctx).then(() => {
       if (!sessionController.signal.aborted) publishAliasFastStatus(ctx);
     }).catch(() => {});

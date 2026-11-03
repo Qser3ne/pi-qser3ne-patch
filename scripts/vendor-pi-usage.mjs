@@ -49,7 +49,7 @@ for (const file of files) {
   const upstreamRefreshStatus = refreshStatus;
   refreshStatus = (ctx) => { upstreamRefreshStatus(ctx); publishAliasFastStatus(ctx); };
   const toggle = async (ctx, enabled, callerSignal) => {`);
-    code = replaceOnce(code, '  pi.on("model_select", (_event, ctx) => {\n    void refreshCapabilities(ctx);\n  });', '  pi.on("model_select", (_event, ctx) => {\n    publishAliasFastStatus(ctx);\n    void refreshCapabilities(ctx).then(() => {\n      if (!sessionController.signal.aborted) publishAliasFastStatus(ctx);\n    }).catch(() => {});\n  });');
+    code = replaceOnce(code, '  pi.on("model_select", (_event, ctx) => {\n    void refreshCapabilities(ctx);\n  });', '  pi.on("model_select", (_event, ctx) => {\n    // Do not display the previous account\'s cached entitlement during auth resolution.\n    ctx.ui.setStatus("qser3ne-codex-fast", ctx.model?.provider === "openai-codex-1" && settingsRuntime.get().settings.codexFastMode ? "⚡ fast unknown" : undefined);\n    void refreshCapabilities(ctx).then(() => {\n      if (!sessionController.signal.aborted) publishAliasFastStatus(ctx);\n    }).catch(() => {});\n  });');
     code = replaceOnce(code, '    return rewritten;\n  });\n  pi.on("message_end",', '    publishAliasFastStatus(ctx);\n    return rewritten;\n  });\n  pi.on("message_end",');
     code = replaceOnce(code, '  pi.on("session_shutdown", async () => {\n    generation += 1;', '  pi.on("session_shutdown", async (_event, ctx) => {\n    ctx.ui.setStatus("qser3ne-codex-fast", undefined);\n    generation += 1;');
     // Tests use the same upstream runtime, not a reimplementation of its rules.

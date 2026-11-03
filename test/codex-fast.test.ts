@@ -72,6 +72,7 @@ function fixture() {
     async request(payload: unknown) { return handlers.get("before_provider_request")![0]({ payload }, ctx); },
     message(message: unknown) { return handlers.get("message_end")![0]({ message }, ctx); },
     session(id: string) { sessionId = id; },
+    select() { for (const h of handlers.get("model_select") ?? []) h({}, ctx); },
     async close() { for (const h of handlers.get("session_shutdown") ?? []) await h({}, ctx); },
   };
 }
@@ -190,6 +191,23 @@ test("switching accounts never reuses another account's Fast entitlement", async
     assert.ok(accounts.includes("third"));
     await f.command();
     assert.equal(f.enabled(), false, "turning off must work even without Fast entitlement");
+  } finally { await f.close(); globalThis.fetch = originalFetch; }
+});
+
+test("model switches do not display the other account's cached Fast support", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (_url, init) => directory(new Headers(init?.headers).get("chatgpt-account-id") === "first")) as typeof fetch;
+  const f = fixture();
+  try {
+    f.ctx.model.provider = "openai-codex";
+    await f.command();
+    assert.equal(f.enabled(), true);
+    f.ctx.model.provider = ALIAS;
+    f.select();
+    assert.equal(f.statuses.at(-1), "⚡ fast unknown", "must authenticate the new account before claiming Fast support");
+    await settle();
+    assert.equal(f.statuses.at(-1), undefined, "the second account does not advertise Fast in this test");
+    assert.equal((await f.request({})).service_tier, "default");
   } finally { await f.close(); globalThis.fetch = originalFetch; }
 });
 
