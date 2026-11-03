@@ -26,6 +26,13 @@ export function createOpenAIRuntime(deps: OpenAIRuntimeDeps): Runtime {
   let cache: { key: string; usage: OpenAIUsage; at: number } | undefined;
   let failure: { key: string; until: number; text: string } | undefined;
   let warned = false;
+  let inFlight: {
+    provider: OpenAIProvider;
+    model: ExtensionContext["model"];
+    registry: ExtensionContext["modelRegistry"];
+    session: ExtensionContext["sessionManager"];
+    promise: Promise<void>;
+  } | undefined;
 
   const safe = (fn: () => void) => {
     try { fn(); } catch (error) {
@@ -132,11 +139,31 @@ export function createOpenAIRuntime(deps: OpenAIRuntimeDeps): Runtime {
     }
   };
 
+  const startCheck = (ctx: ExtensionContext, provider: OpenAIProvider, manual: boolean): Promise<void> => {
+    // Fast tool loops may emit many turn_start events before a slow HTTP request
+    // finishes. Reuse that request rather than starving it with repeated aborts.
+    // A different model/session/registry must still cancel and revalidate auth;
+    // manual refresh always replaces the pending operation.
+    if (!manual && inFlight?.provider === provider && inFlight.model === ctx.model &&
+        inFlight.registry === ctx.modelRegistry && inFlight.session === ctx.sessionManager) {
+      return inFlight.promise;
+    }
+    const pending = {
+      provider, model: ctx.model, registry: ctx.modelRegistry, session: ctx.sessionManager,
+      promise: check(ctx, provider, manual),
+    };
+    inFlight = pending;
+    pending.promise = pending.promise.finally(() => {
+      if (inFlight === pending) inFlight = undefined;
+    });
+    return pending.promise;
+  };
   const handleEvent: Runtime["handleEvent"] = (ctx, model) => {
     if (!isOpenAIProvider(model?.provider)) return;
-    void check(ctx, model.provider, false).catch(() => { /* UI context is no longer usable. */ });
+    void startCheck(ctx, model.provider, false).catch(() => { /* UI context is no longer usable. */ });
   };
   const shutdown = (ctx: ExtensionContext) => {
+    inFlight = undefined;
     cancel();
     controller?.abort();
     controller = undefined;
@@ -148,7 +175,7 @@ export function createOpenAIRuntime(deps: OpenAIRuntimeDeps): Runtime {
       notify(ctx, "Select an openai-codex or openai-codex-1 model first.", "info");
       return;
     }
-    await check(ctx, ctx.model.provider, true);
+    await startCheck(ctx, ctx.model.provider, true);
   };
   return { handleEvent, shutdown, runManualCheck };
 }

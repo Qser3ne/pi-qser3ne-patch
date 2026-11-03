@@ -138,10 +138,11 @@ test("inference uses the selected account's token and attributes every stream ev
   assert.deepEqual(callbackProviders, [CODEX_ACCOUNT_PROVIDER, CODEX_ACCOUNT_PROVIDER, CODEX_ACCOUNT_PROVIDER]);
 });
 
-test("native wire payload keeps composite tool IDs valid and drops the other account's encrypted reasoning", async () => {
+test("gpt-6.1-sol keeps composite tool IDs valid and drops the other account's encrypted reasoning", async () => {
   const native = openaiCodexProvider();
   const alias = createCodexAccountProvider(native);
-  const model = alias.getModels()[0];
+  const model = alias.getModels().find((model) => model.id === "gpt-6.1-sol")!;
+  assert.ok(model, "gpt-6.1-sol must be tested, not just the first catalog model");
   for (const source of [CODEX_ACCOUNT_PROVIDER, "openai-codex"]) {
     const assistant: AssistantMessage = {
       ...message(source, model.id), stopReason: "toolUse",

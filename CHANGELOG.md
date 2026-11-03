@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2] - 2026-11-03
+
+- Fix quota refresh starvation during fast tool loops: repeated turn events now share the same pending account/model/session request rather than continually aborting it.
+- Keep cancellation on manual refresh and model/session changes; revalidate login changes before publishing a shared result.
+- Add regressions for slow quota requests and login changes, and explicitly exercise `gpt-6.1-sol` tool/reasoning handoff.
+- Clarify that per-provider context-window overrides are independent and are not copied between accounts.
+
 ## [0.2.1] - 2026-11-03
 
 - Fix the second Codex account failing to appear in `/login` in Pi's bundled production runtime. Import the native provider through the supported `@earendil-works/pi-ai/providers/all` entrypoint instead of a development-only provider subpath.

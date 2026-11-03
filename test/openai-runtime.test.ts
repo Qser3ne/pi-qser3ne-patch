@@ -204,6 +204,72 @@ test("missing second-account login never falls back to the first; 401 names the 
   } finally { f.close(); }
 });
 
+test("rapid turns reuse an in-flight quota request instead of repeatedly aborting it", async () => {
+  const f = fixture();
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  try {
+    f.respond(async (_url, init) => {
+      await gate;
+      init?.signal?.throwIfAborted();
+      return Response.json(quota);
+    });
+    f.event(); await settle();
+    for (let i = 0; i < 5; i++) { f.event(); await settle(); }
+    assert.equal(f.calls.length, 1, "turn_start must not restart the same slow quota request");
+    assert.equal(f.calls[0].signal?.aborted, false);
+    release(); await settle();
+    assert.match(f.statuses.at(-1)!, /77%/);
+  } finally { release(); f.close(); }
+});
+
+test("a login change during a coalesced request never publishes the previous account's quota", async () => {
+  const f = fixture();
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  try {
+    f.respond(async () => { await gate; return Response.json(quota); });
+    f.event(); await settle();
+    f.credentials["openai-codex"] = { ...f.credentials["openai-codex"], access: jwt("account-b"), accountId: "account-b" };
+    f.event(); await settle();
+    assert.equal(f.calls.length, 1);
+    release(); await settle();
+    assert.match(f.statuses.at(-1)!, /OAuth login changed/);
+    assert.ok(!f.statuses.at(-1)!.includes("%"));
+    await f.manual();
+    assert.equal(new Headers(f.calls.at(-1)?.headers).get("ChatGPT-Account-Id"), "account-b");
+    assert.match(f.statuses.at(-1)!, /77%/);
+  } finally { release(); f.close(); }
+});
+
+test("manual refresh and model changes still cancel a pending quota request", async () => {
+  for (const mode of ["manual", "model", "session"]) {
+    const f = fixture();
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    try {
+      let calls = 0;
+      f.respond(async (_url, init) => {
+        if (++calls === 1) await gate;
+        init?.signal?.throwIfAborted();
+        return Response.json(quota);
+      });
+      f.event(); await settle();
+      if (mode === "manual") await f.manual();
+      else if (mode === "model") { f.ctx.model = { ...f.ctx.model }; f.event(); }
+      else {
+        const newContext = { ...f.context, sessionManager: {} as ExtensionContext["sessionManager"] };
+        f.runtime.handleEvent(newContext, f.ctx.model);
+      }
+      await settle();
+      assert.equal(f.calls.length, 2);
+      assert.equal(f.calls[0].signal?.aborted, true);
+      release(); await settle();
+      assert.match(f.statuses.at(-1)!, /77%/);
+    } finally { release(); f.close(); }
+  }
+});
+
 test("shutdown aborts requests, clears timers, and repeated shutdown is harmless", async () => {
   const f = fixture();
   try {

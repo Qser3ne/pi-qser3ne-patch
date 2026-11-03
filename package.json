@@ -1,6 +1,6 @@
 {
   "name": "pi-sub2api-usage",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Pi extension for independent Codex account logins and Sub2API/OpenAI quota display, compatible with pi-statusline.",
   "type": "module",
   "private": true,

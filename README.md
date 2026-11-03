@@ -79,6 +79,9 @@ Both accounts use the host Pi version's built-in Codex model catalog and streami
 implementation. The extension registers a separate native provider for the second
 account; no `models.json` entry or extra API key is required. Optional overrides
 for the second account belong under `providers["openai-codex-1"]` in `models.json`.
+Overrides on `openai-codex` (for example a reduced `contextWindow`) are intentionally
+not copied to the second account. Configure both entries explicitly if you want
+the same context/compaction threshold for both providers.
 During account handoff, tool-call IDs remain valid and encrypted reasoning from
 the other account is not replayed as if it came from the selected account.
 
@@ -151,7 +154,9 @@ Select an `openai` model and run `/openai-usage` (or wait for the next refresh):
   output. A changed login invalidates the in-memory quota cache.
 - Refreshes at session start, model switch, turn start and every `refreshMs`
   (default 3 minutes). Failure backoff is 30 seconds; countdowns update every
-  minute. Manual refresh bypasses cache/backoff and keeps automatic refresh alive.
+  minute. Repeated turn events share a pending request for the same account/model/
+  session, so fast tool loops cannot repeatedly abort a slow quota request. Manual
+  refresh bypasses cache/backoff and keeps automatic refresh alive.
 - Requests support `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` (including lowercase
   forms), reject redirects and have a 15-second request/body timeout. Switching
   providers or shutting down cancels pending requests and timers.
