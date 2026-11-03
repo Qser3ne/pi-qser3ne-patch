@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { cpSync, mkdirSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -22,6 +22,9 @@ test("production-only package loads through Pi's bundled loader and is selectabl
     cpSync(join(repo, "package.json"), join(pkg, "package.json"));
     mkdirSync(join(pkg, "node_modules"));
     symlinkSync(dirname(require.resolve("undici/package.json")), join(pkg, "node_modules", "undici"), "dir");
+    const manifest = JSON.parse(readFileSync(join(pkg, "package.json"), "utf8"));
+    assert.equal(manifest.name, "pi-qser3ne-patch");
+    assert.equal(manifest.repository.url, "https://github.com/Qser3ne/pi-qser3ne-patch.git");
     const loaded = await host.discoverAndLoadExtensions([pkg], temp, temp);
     assert.deepEqual(loaded.errors, [], "the real production loader must not skip the extension");
     assert.equal(loaded.extensions.length, 1);

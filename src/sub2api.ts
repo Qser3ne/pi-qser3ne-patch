@@ -1,4 +1,4 @@
-export const SUB2API_USER_AGENT = "pi-sub2api-usage/0.1.0";
+export const SUB2API_USER_AGENT = "pi-qser3ne-patch/0.3.0";
 const DEFAULT_TIMEOUT_MS = 15_000;
 
 /** A usage window (e.g. five_hour / seven_day) from the admin account-usage endpoint. */

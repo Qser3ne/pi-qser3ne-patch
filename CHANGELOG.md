@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.3.0] - 2026-11-03
+
+- Rename the project, package and GitHub repository from `pi-sub2api-usage` to `pi-qser3ne-patch`; update installation instructions and HTTP User-Agent branding.
+- Keep existing configuration/cache filenames, commands, status key, provider IDs, login credentials and model overrides unchanged for compatibility.
+
 ## [0.2.3] - 2026-11-03
 
 - Rename the second Codex account in `/login` to `OpenAI Codex 1(legacy)`; keep its `openai-codex-1` provider ID, credentials, and model settings unchanged.

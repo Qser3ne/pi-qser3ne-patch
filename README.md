@@ -1,4 +1,4 @@
-# pi-sub2api-usage
+# pi-qser3ne-patch
 
 A [pi](https://github.com/earendil-works/pi-coding-agent) extension that shows your
 [sub2api](https://github.com/Wei-Shaw/sub2api) upstream account quota and native
@@ -40,8 +40,27 @@ Statusline preview (rendered by `@narumitw/pi-statusline`):
 ## Install
 
 ```bash
-pi install /path/to/pi-sub2api-usage
+pi install git:github.com/Qser3ne/pi-qser3ne-patch
 ```
+
+For development, use `pi install /path/to/pi-qser3ne-patch` instead.
+
+### Renamed from `pi-sub2api-usage`
+
+The package and repository are now `pi-qser3ne-patch`. To migrate an existing
+installation, remove the old Git source (use its exact source from `pi list`,
+including any pinned commit), then install the new source shown above and run
+`/reload`. Do not keep both sources installed: they register the same provider
+and commands.
+
+This is a project rename, not a credential or configuration migration:
+
+- Settings remain at `~/.pi/agent/pi-sub2api-usage.json` and the Sub2API token
+  cache remains at `~/.pi/agent/pi-sub2api-usage-cache.json`; no file renaming or
+  copying is required. Historical design/plan documents retain the old name.
+- `/sub2api-usage`, `/openai-usage`, and the `sub2api-usage` status key are unchanged.
+- `openai-codex` / `openai-codex-1` credentials, login display names and per-provider
+  model overrides (including `contextWindow`) are unchanged.
 
 ## Codex multi-account login
 
@@ -233,6 +252,8 @@ All fields:
 
 ## Uninstall
 
+For a pinned installation, use the exact source (including its ref) from `pi list`.
+
 ```bash
-pi remove pi-sub2api-usage
+pi remove git:github.com/Qser3ne/pi-qser3ne-patch
 ```

@@ -184,7 +184,7 @@ export async function fetchOpenAIUsage(options: {
     signal.throwIfAborted();
     const response = await fetchImpl(url, {
       method: "GET", redirect: "error", signal,
-      headers: { ...auth.headers, Accept: "application/json", "User-Agent": "pi-sub2api-usage" },
+      headers: { ...auth.headers, Accept: "application/json", "User-Agent": "pi-qser3ne-patch" },
     });
     if (!response.ok) return fail(`OpenAI usage HTTP ${response.status}${response.status === 401 ? `; reconnect with /login ${auth.loginProvider ?? "openai-codex"}` : ""}`);
     const payload: unknown = await response.json();

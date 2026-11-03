@@ -90,7 +90,7 @@ test("login happy path persists cache with mode 0600", async () => {
   assert.equal(calls.length, 1);
   assert.equal(calls[0]!.url, "https://example.test/api/v1/auth/login");
   const headers = calls[0]!.init.headers as Record<string, string>;
-  assert.equal(headers["User-Agent"], "pi-sub2api-usage/0.1.0");
+  assert.equal(headers["User-Agent"], "pi-qser3ne-patch/0.3.0");
   assert.deepEqual(JSON.parse(calls[0]!.init.body as string), { email: "a@b.c", password: "p" });
   const persisted = JSON.parse(readFileSync(cachePath, "utf8"));
   assert.deepEqual(persisted, { version: 1, ...identity, accessToken: "abc", expiresAt: now + 3_600_000 });

@@ -72,6 +72,7 @@ export function normalizeSettings(raw: unknown): Sub2ApiSettings {
 }
 
 export function loadSettings(agentDir: string): { settings: Sub2ApiSettings; broken: boolean } {
+  // Compatibility contract: a package/repository rename must not orphan user settings.
   const loaded = loadJsonFile(join(agentDir, "pi-sub2api-usage.json"), normalizeSettings);
   return { settings: loaded.value, broken: loaded.broken };
 }

@@ -1,6 +1,10 @@
 {
-  "name": "pi-sub2api-usage",
-  "version": "0.2.3",
+  "name": "pi-qser3ne-patch",
+  "version": "0.3.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Qser3ne/pi-qser3ne-patch.git"
+  },
   "description": "Pi extension for independent Codex account logins and Sub2API/OpenAI quota display, compatible with pi-statusline.",
   "type": "module",
   "private": true,

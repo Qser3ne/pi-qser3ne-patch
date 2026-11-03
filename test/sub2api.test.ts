@@ -91,7 +91,7 @@ test("fetchAccountUsage builds the admin route with id and source query", async 
   assert.equal(calls[0]!.init.method, "GET");
   const headers = calls[0]!.init.headers as Record<string, string>;
   assert.equal(headers.Authorization, "Bearer tok");
-  assert.equal(headers["User-Agent"], "pi-sub2api-usage/0.1.0");
+  assert.equal(headers["User-Agent"], "pi-qser3ne-patch/0.3.0");
 });
 
 test("fetchAccountUsage active source and POST method pass through", async () => {
