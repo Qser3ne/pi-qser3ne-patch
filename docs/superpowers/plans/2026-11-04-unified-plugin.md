@@ -59,10 +59,10 @@
 **Files:** parent .gitmodules, README.md and gitlinks; ~/.pi/agent/settings.json; managed Git package installation.
 **Interfaces:** Consumes verified target commit; produces published target/parent main branches and one configured pinned package source.
 
-- [ ] Run final clean-install tests and review source ancestry, single-entry loading and diff. Fast-forward target main to the verified integration branch; fetch remote and reject divergent history rather than force push.
-- [ ] Push target origin/main and verify remote SHA equals local SHA before changing the installation.
-- [ ] Remove old parent gitlinks/.gitmodules sections using submodule-aware Git commands only after backups and ancestry verification. Update parent README to document one package and historical source migration; leave unrelated .pi/ untouched.
-- [ ] Commit the parent with the new target pointer, push normally and verify remote SHA.
-- [ ] Back up settings again immediately before migration. Install git:github.com/Qser3ne/pi-qser3ne-patch@<verified SHA>, then remove the exact old Daybreak/token-speed sources. Preserve all unrelated settings and disabled standalone pi-usage configuration.
-- [ ] Verify pi list/configured sources, installed repository HEAD, package manifest and actual resource discovery. Check no old auto-discovered copies add duplicate commands. Restore settings backup if installation cannot be completed.
-- [ ] Report commits, test totals, backup path and /reload requirement; remove temporary worktree when no longer needed, retain backup bundles.
+- [x] Run final clean-install tests and review source ancestry, single-entry loading and diff. Fast-forward target main to the verified integration branch; fetch remote and reject divergent history rather than force push.
+- [x] Push target origin/main and verify remote SHA equals local SHA before changing the installation.
+- [x] Remove old parent gitlinks/.gitmodules sections using submodule-aware Git commands only after backups and ancestry verification. Update parent README to document one package and historical source migration; leave unrelated .pi/ untouched.
+- [x] Commit the parent with the new target pointer, push normally and verify remote SHA.
+- [x] Back up settings again immediately before migration. Install git:github.com/Qser3ne/pi-qser3ne-patch@<verified SHA>, then remove the exact old Daybreak/token-speed sources. Preserve all unrelated settings and disabled standalone pi-usage configuration.
+- [x] Verify pi list/configured sources, installed repository HEAD, package manifest and actual resource discovery. Check no old auto-discovered copies add duplicate commands. Restore settings backup if installation cannot be completed.
+- [x] Report commits, test totals, backup path and /reload requirement; remove temporary worktree when no longer needed, retain backup bundles.
