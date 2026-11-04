@@ -1,0 +1,33 @@
+{
+  "name": "pi-token-speed",
+  "version": "0.1.0",
+  "description": "Pi extension that shows live token generation speed (tok/s) and TTFT in the TUI statusline.",
+  "type": "module",
+  "private": true,
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "pi",
+    "token-speed",
+    "tokens-per-second",
+    "ttft",
+    "statusline"
+  ],
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  },
+  "scripts": {
+    "test": "node --experimental-strip-types --test test/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "1.1.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.0"
+  }
+}
