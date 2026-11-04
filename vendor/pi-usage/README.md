@@ -3,7 +3,9 @@
 Derived from **@narumitw/pi-usage 0.69.0**, copyright (c) 2026 narumiruna,
 under the MIT license in [LICENSE](LICENSE). Upstream:
 <https://github.com/narumiruna/pi-extensions/tree/main/packages/pi-usage>.
-This is not an official pi-usage release.
+This is not an official pi-usage release. Since pi-qser3ne-patch 0.5.0, the
+unified `src/index.ts` calls this module internally; it is not a separate
+`pi.extensions` entry and cannot be disabled independently with resource filters.
 
 The npm distribution's generated TypeScript runtime is included so Pi's bundled
 loader can resolve its host-provided imports normally. Source maps are omitted.

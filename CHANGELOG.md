@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.0] - 2026-11-04
+
+- Merge pi-daybreak and pi-token-speed with their complete Git histories into this repository; expose all features, including vendored pi-usage, through one `src/index.ts` extension entry.
+- Preserve Daybreak commands, branch state and official endpoint restrictions; retain token speed/TTFT, quota, account isolation and Fast preferences.
+- Fix stale token-speed status on session reset/shutdown by retaining the last published value until the UI has been cleared.
+- Consolidate dependencies and all tests on the Pi 1.5.0 development baseline; require Node.js >=22.19.0. Add single-entry production loader and combined lifecycle/request regressions.
+- Document migration away from the two standalone packages; keep the upstream pi-usage entry disabled to prevent duplicate commands.
+
 ## [0.4.0] - 2026-11-03
 
 - Include a reproducible, MIT-attributed pi-usage 0.69.0 compatibility entry: the original `/fast` and `/usage` Fast controls now recognize `openai-codex-1`.

@@ -3,7 +3,7 @@ import test from "node:test";
 import { harness, install, manifest, model, state } from "./helpers/daybreak.mjs";
 
 test("Git package declares exactly one loadable extension and no bundled host runtime", () => {
-  assert.equal(manifest.name, "pi-daybreak");
+  assert.equal(manifest.name, "pi-qser3ne-patch");
   assert.deepEqual(manifest.pi.extensions, ["./src/index.ts"]);
   assert.equal(typeof install, "function");
   assert.equal(manifest.peerDependencies["@earendil-works/pi-coding-agent"], "*");

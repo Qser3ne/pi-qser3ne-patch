@@ -4,21 +4,21 @@
 
 ## 安装
 
-与 `pi-sub2api-usage`、`pi-token-speed` 一样，使用独立 Git 仓库和 Pi 包安装：
+Daybreak 已并入 `pi-qser3ne-patch`，不再单独安装：
 
 ```bash
-pi install git:github.com/Qser3ne/pi-daybreak
+pi install git:github.com/Qser3ne/pi-qser3ne-patch
 ```
 
 需要可复现安装时，固定到审核过的完整提交：
 
 ```bash
-pi install git:github.com/Qser3ne/pi-daybreak@<完整提交哈希>
+pi install git:github.com/Qser3ne/pi-qser3ne-patch@<完整提交哈希>
 ```
 
-当前会话执行 `/reload` 后生效。Git 安装副本由 Pi 管理，位于 `~/.pi/agent/git/github.com/Qser3ne/pi-daybreak/`；扩展入口为 `src/index.ts`。
+当前会话执行 `/reload` 后生效。Git 安装副本由 Pi 管理，位于 `~/.pi/agent/git/github.com/Qser3ne/pi-qser3ne-patch/`；统一入口 `src/index.ts` 内部初始化 `src/daybreak.ts`。
 
-开发源码作为 `pi-extensions` 的子模块管理，位于 `pi-extensions/pi-daybreak/`。修改开发源码后，需要先提交并推送子仓库，再更新 Pi 安装的提交和父仓库子模块指针；修改源码目录不会自动修改 Pi 的安装副本。
+开发源码位于 `pi-extensions/pi-qser3ne-patch/`，原 Daybreak 提交历史已保留。修改源码后仍需提交、推送并更新 Pi 的安装提交；不会自动同步安装副本。旧 Git 包须用 `pi remove <pi list 中的完整旧来源>` 移除，避免重复命令。
 
 从旧的手动安装迁移时，先备份并移走 `~/.pi/agent/extensions/daybreak/`，再安装 Git 包，避免 `/daybreak` 重复注册。迁移不更改会话记录，已有分支中的开关状态仍可恢复。
 
@@ -54,7 +54,7 @@ pi install git:github.com/Qser3ne/pi-daybreak@<完整提交哈希>
 
 ## 范围与状态
 
-- 支持 `openai-codex` / `openai` 提供者，以及官方 `https://chatgpt.com/backend-api` 的 Codex Responses 和 `https://api.openai.com/v1` 的 Responses 接口。
+- 保持原范围：支持 `openai-codex` / `openai` 提供者（暂不含 `openai-codex-1`），以及官方 `https://chatgpt.com/backend-api` 的 Codex Responses 和 `https://api.openai.com/v1` 的 Responses 接口。
 - 不向第三方提供者、代理端点或其他协议注入。不会自动切换模型。
 - 默认关闭。开关记录在当前会话分支中；恢复会话、`/reload`、`/tree` 时按所在分支恢复。新会话默认关闭，不改变全局默认设置。
 - 当前回复期间拒绝切换，避免同一轮请求混用模式；可等待完成或先停止回复。
@@ -66,13 +66,13 @@ pi install git:github.com/Qser3ne/pi-daybreak@<完整提交哈希>
 需要 Node.js >= 22.19.0。在扩展目录安装锁定的开发依赖后验证：
 
 ```bash
-cd pi-daybreak
+cd pi-qser3ne-patch
 npm ci
 npm test
 npm run typecheck
 ```
 
-- `npm run test:unit`：独立单元测试，无需全局安装 Pi 或状态栏，甚至无需安装开发依赖即可运行。
+- `npm run test:unit`：统一插件全部单元/组合测试，无需全局安装 Pi 或状态栏。仅运行 Daybreak 单元测试可执行 `node --experimental-strip-types --test tests/daybreak.test.mjs`，无需开发依赖。
 - `npm run test:integration`：使用锁文件中的本地 Pi、pi-statusline 和 WebSocket 开发依赖，验证图标/颜色/窄屏排版、Codex SSE/WebSocket 序列化和授权错误不降级。
 - `npm test`：依次运行以上两组测试。
 - `npm run typecheck`：严格检查扩展 TypeScript 源码。

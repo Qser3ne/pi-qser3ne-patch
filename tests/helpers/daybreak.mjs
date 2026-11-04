@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import install from "../../src/index.ts";
+import install from "../../src/daybreak.ts";
 
 export { install };
 export const manifest = JSON.parse(await readFile(new URL("../../package.json", import.meta.url), "utf8"));

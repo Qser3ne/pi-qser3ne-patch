@@ -8,7 +8,7 @@ import type {
   MessageStartEvent,
   MessageUpdateEvent,
 } from "@earendil-works/pi-coding-agent";
-import tokenSpeedExtension from "../src/index.ts";
+import tokenSpeedExtension from "../src/token-speed.ts";
 
 function setup(t: TestContext, mode: ExtensionContext["mode"] = "tui") {
   let now = 1000;
@@ -123,6 +123,22 @@ test("starting a new session clears previous TTFT samples", async (t) => {
   await h.start();
   assert.equal(h.status(), "⚡ --");
 });
+
+for (const event of [
+  { type: "session_start", reason: "new" },
+  { type: "session_shutdown", reason: "reload" },
+] as const) {
+  test(`${event.type} clears the last published speed status`, async (t) => {
+    const h = setup(t);
+    await h.start();
+    h.advance(800);
+    await h.delta();
+    await h.end();
+    assert.match(h.status()!, /TTFT 800ms/);
+    await h.emit(event);
+    assert.equal(h.status(), undefined);
+  });
+}
 
 for (const mode of ["print", "json", "rpc"] as const) {
   test(`TTFT does not publish status in ${mode} mode`, async (t) => {

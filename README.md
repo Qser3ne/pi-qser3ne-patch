@@ -1,6 +1,6 @@
 # pi-qser3ne-patch
 
-个人 Pi 扩展补丁集，原名 `pi-sub2api-usage`。当前主要提供 **Codex 双账号、Fast 兼容及订阅额度显示**。
+个人 Pi 扩展补丁集，原名 `pi-sub2api-usage`。现已合并原 `pi-daybreak`、`pi-token-speed`，通过**一个仓库、一个包、一个扩展入口**提供 Codex 双账号、Fast、订阅额度、Daybreak Blue 和速度统计。
 
 ## 已实现功能
 
@@ -9,6 +9,8 @@
 | Codex 双账号 | 保留原生 `openai-codex`，新增 `openai-codex-1`，登录名为 `OpenAI Codex 1(legacy)`。复用 Pi 原生 OAuth、模型目录及流式请求实现。 |
 | 账号隔离 | 两账号独立登录、刷新、退出和查询额度；不复制凭据、不回退到另一账号，也不自动轮换账号。切换时保留有效工具调用 ID，隔离跨账号的加密推理。 |
 | Fast 模式 | 内置 pi-usage **0.69.0 兼容入口**，原 `/fast` 及 `/usage` Fast 控件支持两个 Codex 账号；保留 Fast 费用估算修正。 |
+| Daybreak Blue | `/daybreak` 控制官方 OpenAI Responses 请求参数；默认关闭，按会话分支恢复，仅服务端确认后显示 active。见 [详细说明](docs/daybreak.md)。 |
+| 速度与 TTFT | TUI 显示实时 tok/s、最近 5 次首 token 延迟及最近 10 分钟平均生成速度；不计空闲和工具执行时间。见 [详细说明](docs/token-speed.md)。 |
 | Codex 额度 | 使用当前账号 OAuth 查询剩余额度和重置倒计时；按服务端实际窗口显示，不假设所有套餐都有 5 小时限制。不是 API 账单或会话 token 计数。 |
 | Sub2API 额度 | 查询管理员账号用量接口；支持邮箱/密码自动登录、令牌缓存、过期或 401 后重新登录，以及手动 token。 |
 | 状态栏 | 通过 `ctx.ui.setStatus()` 兼容 pi-statusline，不替换 footer；额度使用 `sub2api-usage` key，不覆盖 pi-usage 的 `usage`。 |
@@ -23,7 +25,7 @@
 
 ## 安装
 
-已有独立 pi-usage 或旧名扩展时，先按下文处理重复加载，再安装并重载。
+需要 Node.js >=22.19.0。已有独立 pi-usage、Daybreak、速度统计或旧名扩展时，先按下文处理重复加载，再安装并重载。
 
 ```bash
 pi install git:github.com/Qser3ne/pi-qser3ne-patch
@@ -33,7 +35,9 @@ pi install git:github.com/Qser3ne/pi-qser3ne-patch
 
 **避免重复加载：**
 
-- 旧名 `pi-sub2api-usage` 与新包不能同时安装；使用 `pi list` 找到旧来源并移除。
+- `pi-daybreak`、`pi-token-speed` 和旧名 `pi-sub2api-usage` 不能与本包同时加载。先用 `pi list` 查看来源，再逐个执行 `pi remove <对应的完整来源>`（包括固定提交后缀）。
+- 若仍有手动安装的 `~/.pi/agent/extensions/daybreak/` 或 token-speed 入口，先备份并移出自动发现目录。
+- 原 `/daybreak` 会话状态、额度配置及 Fast 偏好均保持兼容，无需复制凭据。
 - 若已安装独立 pi-usage，将 `~/.pi/agent/settings.json` 中对应包改为下面的形式，保留实际版本，仅禁用其扩展入口：
 
 ```json
@@ -43,7 +47,7 @@ pi install git:github.com/Qser3ne/pi-qser3ne-patch
 }
 ```
 
-本包提供兼容入口，无需修改原 npm 文件或另建 fork。加载后应只有一个 `/fast` 和 `/usage`，没有数字后缀。兼容入口随本包维护，不会跟随独立 pi-usage 自动升级。
+本包唯一入口为 `src/index.ts`，内部初始化全部功能（包括 pi-usage 兼容模块），无需修改原 npm 文件或另建 fork。加载后应只有一个 `/fast` 和 `/usage`，没有数字后缀。兼容入口随本包维护，不会跟随独立 pi-usage 自动升级。
 
 ## Codex 使用
 
@@ -57,6 +61,7 @@ pi install git:github.com/Qser3ne/pi-qser3ne-patch
 | `/sub2api-usage` | 强制刷新当前 Sub2API 或原生 OpenAI/Codex 额度，保留旧命令兼容。 |
 | `/fast` | 无参数切换 Fast，仅对官方 Codex Responses 端点及支持的模型生效。 |
 | `/usage` | pi-usage 原有用量界面及 Fast 控件；第二账号额度仍由本包的 `/openai-usage` 和状态栏提供。 |
+| `/daybreak [on\|off\|status\|help]` | 切换或查看 Daybreak Blue；无参数切换。原有范围保持不变，仅支持 `openai` / `openai-codex` 官方 Responses 端点，暂不含 `openai-codex-1`。 |
 
 Fast 根据**当前账号**的模型目录确认能力：开启且支持时请求 `service_tier: "priority"`，否则使用 `"default"`；不扩展到原生 `openai` 或自定义代理端点。Fast 消耗更多套餐额度，不保证实际提速。
 
@@ -114,6 +119,10 @@ npm run typecheck
 npm test
 ```
 
-pi-usage 兼容入口的来源、MIT 许可及再生方法见 [vendor/pi-usage/README.md](vendor/pi-usage/README.md)；版本记录见 [CHANGELOG.md](CHANGELOG.md)。
+`npm test` 包含全部单元测试、统一入口加载/组合测试及 Daybreak SSE/WebSocket 集成测试。测试使用模拟传输，不调用真实账号。
 
-卸载时使用 `pi remove <pi list 中的完整来源>`。如要保留原 pi-usage，请恢复其独立扩展入口；也可仅禁用本包的 `vendor/pi-usage/index.ts` 入口，再执行 `/reload`。凭据和偏好无需迁移。
+两个原仓库的完整提交历史已合并；源码分别位于 `src/daybreak.ts` 和 `src/token-speed.ts`，不依赖旧目录或嵌套仓库。
+
+pi-usage 兼容模块的来源、MIT 许可及再生方法见 [vendor/pi-usage/README.md](vendor/pi-usage/README.md)；版本记录见 [CHANGELOG.md](CHANGELOG.md)。
+
+卸载时使用 `pi remove <pi list 中的完整来源>`。本包是单入口，不再支持通过包资源过滤单独禁用内置 pi-usage；卸载本包后可恢复独立 pi-usage 入口，再执行 `/reload`。凭据和偏好无需迁移。

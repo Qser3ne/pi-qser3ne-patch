@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { estimateTokens, fmt, fmtMs } from "../src/index.ts";
+import { estimateTokens, fmt, fmtMs } from "../src/token-speed.ts";
 
 test("estimateTokens counts CJK as 1 token per char", () => {
   assert.equal(estimateTokens("你好世界"), 4);

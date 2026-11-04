@@ -83,7 +83,7 @@ export default function tokenSpeedExtension(pi: ExtensionAPI): void {
     estimated = 0;
     samples = [];
     active = false;
-    lastShown = undefined;
+    // Keep the published value until show() clears or replaces the UI status.
   };
 
   const show = (ctx: ExtensionContext, text: string | undefined) => {

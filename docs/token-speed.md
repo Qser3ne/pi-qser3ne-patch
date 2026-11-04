@@ -1,6 +1,6 @@
-# pi-token-speed
+# Token speed / TTFT
 
-A [pi](https://github.com/earendil-works/pi-coding-agent) extension that shows the live
+An internal module of `pi-qser3ne-patch` (formerly the standalone `pi-token-speed` extension) that shows the live
 token generation speed (tok/s) and time-to-first-token (TTFT) in the TUI statusline.
 It publishes under the status key `token-speed`, so `@narumitw/pi-statusline` picks it up
 automatically.
@@ -34,13 +34,15 @@ Statusline preview:
 ## Install
 
 ```bash
-pi install /path/to/pi-token-speed
+pi install git:github.com/Qser3ne/pi-qser3ne-patch
 ```
+
+Remove the old standalone source shown by `pi list` with `pi remove <exact-source>` and run `/reload` to avoid duplicate handlers. The unified `src/index.ts` initializes `src/token-speed.ts`; original Git history is preserved.
 
 ## Development
 
 ```bash
-npm install
+npm ci
 npm test
 npm run typecheck
 ```
@@ -48,5 +50,5 @@ npm run typecheck
 ## Uninstall
 
 ```bash
-pi remove pi-token-speed
+pi remove <exact-pi-qser3ne-patch-source-from-pi-list>
 ```

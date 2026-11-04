@@ -2,10 +2,16 @@ import { type ExtensionAPI, getAgentDir } from "@earendil-works/pi-coding-agent"
 import { createRuntime } from "./runtime.ts";
 import { isOpenAIProvider } from "./openai.ts";
 import { createCodexAccountProvider } from "./codex-accounts.ts";
+import daybreak from "./daybreak.ts";
+import tokenSpeedExtension from "./token-speed.ts";
+import usageExtension from "../vendor/pi-usage/index.ts";
 
 export { createRuntime } from "./runtime.ts";
 
-export default function sub2apiUsageExtension(pi: ExtensionAPI): void {
+export default function qser3nePatchExtension(pi: ExtensionAPI): void {
+  // Preserve the former package order for shared lifecycle/request hooks.
+  tokenSpeedExtension(pi);
+  daybreak(pi);
   pi.registerProvider(createCodexAccountProvider());
   const runtime = createRuntime({ agentDir: getAgentDir() });
   pi.on("session_start", (_event, ctx) => runtime.handleEvent(ctx, ctx.model));
@@ -29,4 +35,5 @@ export default function sub2apiUsageExtension(pi: ExtensionAPI): void {
       await runtime.runManualCheck(ctx);
     },
   });
+  usageExtension(pi);
 }

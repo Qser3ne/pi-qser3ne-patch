@@ -34,10 +34,13 @@ test("production-only package loads through Pi's bundled loader and is selectabl
     const resources = await manager.resolve(async () => "error");
     assert.ok(resources.extensions.some((entry: { path: string; enabled: boolean }) => entry.path.startsWith(upstream) && !entry.enabled));
     const paths = resources.extensions.filter((entry: { enabled: boolean }) => entry.enabled).map((entry: { path: string }) => entry.path);
-    assert.equal(paths.length, 2, "only the patch and compatibility entries should be enabled");
+    assert.equal(paths.length, 1, "all features must load through one unified entry");
     const loaded = await host.discoverAndLoadExtensions(paths, temp, temp);
     assert.deepEqual(loaded.errors, [], "the real production loader must not skip the extension");
-    assert.equal(loaded.extensions.length, 2);
+    assert.equal(loaded.extensions.length, 1);
+    for (const name of ["daybreak", "fast", "usage", "openai-usage", "sub2api-usage"]) {
+      assert.equal(loaded.extensions.filter((ext: { commands: Map<string, unknown> }) => ext.commands.has(name)).length, 1, `exactly one /${name}`);
+    }
     const fastCommands = loaded.extensions.flatMap((ext: { commands: Map<string, unknown> }) => [...ext.commands.keys()].filter((name) => name === "fast"));
     assert.equal(fastCommands.length, 1, "the package must expose exactly one original /fast");
     assert.ok(loaded.extensions.some((ext: { commands: Map<string, unknown> }) => ext.commands.has("usage")));
