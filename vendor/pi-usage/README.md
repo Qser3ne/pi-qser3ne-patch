@@ -26,25 +26,15 @@ installation, Pi settings, or credentials. To upgrade upstream, review changes,
 update the pinned dev dependency and generator deliberately, then regenerate and
 test. Installing a newer standalone pi-usage does not upgrade this entry.
 
-## Changes maintained here
+## Behavior archive
 
-- Recognize only `openai-codex` and `openai-codex-1` for official Codex Fast mode.
-- Resolve runtime OAuth, readiness and credential candidates using the **actual
-  selected provider ID**. No canonical-account fallback or credential copying.
-- Preserve upstream model-directory capability discovery, per-account caching,
-  cancellation, global `pi-usage.json.codexFastMode`, priority/default payload
-  rewriting, `/fast`, `/usage` Fast controls and Fast cost correction.
-- Show `⚡ fast` for an effective second-account request, or `⚡ fast unknown`
-  when enabled but unverified, under a separate `qser3ne-codex-fast` status key.
-- Use a request-local undici environment-proxy dispatcher, destroyed after bounded
-  response consumption. Do not replace global fetch or the global dispatcher.
-- Export Fast registration/catalog helpers for tests of the actual upstream logic.
+The current behavior is defined once in the repository archives:
 
-Everything else is upstream functionality. In particular, this does not add a
-new alias quota adapter to pi-usage's public usage API: the project's existing
-`/openai-usage` and quota chip remain responsible for second-account quota.
+- [Codex Fast](../../docs/archive/codex-fast/archive.md)
+- [Provider usage, settings, reset confirmation and event API](../../docs/archive/provider-usage/archive.md)
+- [Native and second-account quota](../../docs/archive/native-subscription-usage/archive.md)
+- [Unified package loading and coexistence](../../docs/archive/extension-package/archive.md)
 
-**Disable the standalone pi-usage extension entry** while this entry is loaded,
-otherwise Pi will expose duplicate `/fast` and `/usage` commands. See the root
-README for settings and rollback instructions. Existing `pi-usage.json` is reused
-without resetting preferences; Fast still uses more plan allowance.
+This file retains provenance, licensing and regeneration instructions. It does not
+add a separate installable extension entry. For package installation and avoiding
+duplicate standalone entries, see the [root README](../../README.md).

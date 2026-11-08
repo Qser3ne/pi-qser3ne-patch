@@ -1,6 +1,6 @@
 # Pi Daybreak Blue
 
-为官方 OpenAI Responses 请求增加 Daybreak Blue 开关；复用 Pi 当前登录和模型，不启动 Codex CLI，不读取或改写登录凭据，不替换模型目录，也不更改系统提示词。
+Daybreak 能力的安装、开发和验收操作页；当前行为以所链接的档案为准。
 
 ## 安装
 
@@ -22,44 +22,13 @@ pi install git:github.com/Qser3ne/pi-qser3ne-patch@<完整提交哈希>
 
 从旧的手动安装迁移时，先备份并移走 `~/.pi/agent/extensions/daybreak/`，再安装 Git 包，避免 `/daybreak` 重复注册。迁移不更改会话记录，已有分支中的开关状态仍可恢复。
 
-## 命令
+## 行为档案
 
-| 命令 | 行为 |
-| --- | --- |
-| `/daybreak` | 切换开启/关闭 |
-| `/daybreak on` | 开启，重复执行不关闭 |
-| `/daybreak off` | 关闭 |
-| `/daybreak status` | 查看状态，不改变开关 |
-| `/daybreak help` | 显示帮助 |
+命令、请求参数、会话持久化、适用端点与状态确认的唯一现状定义见 [daybreak-blue 档案](archive/daybreak-blue/archive.md)。本页保留安装、开发验证、历史验收和协议参考。
 
-开启后，在后续请求体中合并：
+## 可选状态栏配置
 
-```json
-{ "access_programs": { "cyber": "daybreak_blue" } }
-```
-
-保留其他请求参数、当前模型、思考等级、工具调用、缓存设置及已有的其他 access programs。SSE 和 WebSocket 均复用 Pi 原有实现，不使用已弃用的 Daybreak 模型别名。关闭后不再注入参数，不会删除其他扩展自己设置的参数。
-
-## pi-statusline 兼容
-
-使用 `ctx.ui.setStatus("daybreak", ...)` 的原生扩展状态接口，不调用 `setFooter()`，无需修改现有 pi-statusline 配置或包代码。
-
-- 开启、尚未确认：`🛡️ Daybreak Blue requested`，不显示成功色。
-- 完成响应明确回传 `access_programs.cyber=daybreak_blue`：`🛡️ Daybreak Blue active`，成功色。
-- 请求失败（包括模型不支持 Daybreak）：`🛡️ Daybreak Blue error`，警告色；`/daybreak status` 显示错误详情。
-- 切换到不支持的提供者/端点：`🛡️ Daybreak Blue unavailable`；警告色，此时不注入参数。切回支持的端点后自动恢复请求模式，重新等待服务端确认。
-- 关闭：清除此状态项。
-
-可选：在 `pi-statusline.json` 的 `extensionStatusIcons` 中配置 `"daybreak": "🌅"` 覆盖图标。当前 pi-statusline 最多显示五个扩展状态；更多状态可能被它省略，这是其原生限制。
-
-## 范围与状态
-
-- 保持原范围：支持 `openai-codex` / `openai` 提供者（暂不含 `openai-codex-1`），以及官方 `https://chatgpt.com/backend-api` 的 Codex Responses 和 `https://api.openai.com/v1` 的 Responses 接口。
-- 不向第三方提供者、代理端点或其他协议注入。不会自动切换模型。
-- 默认关闭。开关记录在当前会话分支中；恢复会话、`/reload`、`/tree` 时按所在分支恢复。新会话默认关闭，不改变全局默认设置。
-- 当前回复期间拒绝切换，避免同一轮请求混用模式；可等待完成或先停止回复。
-- 作用于当前 Pi 会话中经过主请求钩子且模型匹配的请求；不会自动传播到独立子代理进程或扩展自己发出的嵌套请求。
-- 开关打开不等于服务端接受：`requested` 仅表示已配置参数，只有成功完成响应明确回传对应 access program 才标记 `active`。OpenAI 服务端负责访问资格、组织/项目和模型兼容性校验；授权错误由 Pi 原样报告，不静默降级为普通模式。切换模型、重新加载或恢复会话后重新确认。
+可在 `pi-statusline.json` 的 `extensionStatusIcons` 中加入 `"daybreak": "🌅"` 覆盖图标。当前 pi-statusline 最多显示五个扩展状态；更多状态可能由它省略，不应仅凭图标缺失判断请求是否生效。
 
 ## 验证
 
