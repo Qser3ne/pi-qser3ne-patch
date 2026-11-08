@@ -82,32 +82,36 @@ export async function login(options: LoginOptions): Promise<TokenState> {
   timer.unref?.();
   const signal = options.signal ? AbortSignal.any([options.signal, controller.signal]) : controller.signal;
   const url = `${options.instanceBaseUrl.replace(/\/+$/, "")}${LOGIN_ROUTE}`;
-  let response: Response;
-  try {
-    response = await fetchImpl(url, {
-      method: "POST",
-      signal,
-      headers: {
-        "Content-Type": "application/json",
-        "User-Agent": SUB2API_USER_AGENT,
-        Accept: "application/json",
-      },
-      body: JSON.stringify({ email: options.email, password: options.password }),
-    });
-  } catch (error) {
-    if (signal.aborted) throw error;
-    throw new AuthError(`login request failed: ${String(error)}`, "login-failed");
-  } finally {
-    clearTimeout(timer);
-  }
-  if (!response.ok) {
-    throw new AuthError(`login responded ${response.status}`, "login-failed");
-  }
   let payload: unknown;
   try {
-    payload = await response.json();
-  } catch (error) {
-    throw new AuthError(`login response was not JSON: ${String(error)}`, "login-failed");
+    let response: Response;
+    try {
+      response = await fetchImpl(url, {
+        method: "POST",
+        signal,
+        headers: {
+          "Content-Type": "application/json",
+          "User-Agent": SUB2API_USER_AGENT,
+          Accept: "application/json",
+        },
+        body: JSON.stringify({ email: options.email, password: options.password }),
+      });
+    } catch (error) {
+      if (signal.aborted) throw error;
+      throw new AuthError(`login request failed: ${String(error)}`, "login-failed");
+    }
+    if (!response.ok) {
+      throw new AuthError(`login responded ${response.status}`, "login-failed");
+    }
+    try {
+      payload = await response.json();
+    } catch (error) {
+      if (signal.aborted) throw error;
+      throw new AuthError(`login response was not JSON: ${String(error)}`, "login-failed");
+    }
+    signal.throwIfAborted();
+  } finally {
+    clearTimeout(timer);
   }
   const envelope = (payload !== null && typeof payload === "object" ? payload : {}) as Record<string, unknown>;
   if (envelope.code !== 0) {

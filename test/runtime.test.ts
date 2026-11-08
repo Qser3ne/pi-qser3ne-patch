@@ -403,6 +403,120 @@ test("runManualCheck forces a query and notifies raw JSON", async () => {
   fixture.cleanup();
 });
 
+test("manual success restores periodic refresh from the manual result without duplicate timers", async (t) => {
+  const { fetchImpl, calls } = scriptedFetch([
+    loginStep("tok-1"), usageStep(), usageStep({ utilization: 40, resets_at: null }, null),
+    usageStep({ utilization: 60, resets_at: null }, null),
+  ]);
+  const fixture = makeFixture(fetchImpl);
+  const runtime = runtimeOf(fixture, fetchImpl);
+  t.after(() => { runtime.shutdown(fixture.ctx as unknown as ExtensionContext); fixture.cleanup(); });
+  runtime.handleEvent(fixture.ctx as unknown as ExtensionContext, fixture.ctx.model);
+  await settle();
+  fixture.clock.advance(30_000);
+  await runtime.runManualCheck(fixture.ctx as unknown as ExtensionCommandContext);
+  assert.ok(fixture.ctx.ui.statuses.at(-1)?.includes("60%"));
+  fixture.clock.advance(179_999);
+  await settle();
+  assert.equal(calls.length, 3, "old timer must not fetch before the manual result expires");
+  fixture.clock.advance(1);
+  await settle();
+  assert.equal(calls.length, 4, "must fetch automatically without another lifecycle event");
+  assert.ok(fixture.ctx.ui.statuses.at(-1)?.includes("40%"));
+});
+
+test("manual success restores countdown redraw without another network request", async (t) => {
+  const { fetchImpl, calls } = scriptedFetch([
+    loginStep("tok-1"), usageStep({ utilization: 20, resets_at: "1970-01-01T00:19:40Z" }, null),
+  ]);
+  const fixture = makeFixture(fetchImpl);
+  const runtime = runtimeOf(fixture, fetchImpl);
+  t.after(() => { runtime.shutdown(fixture.ctx as unknown as ExtensionContext); fixture.cleanup(); });
+  await runtime.runManualCheck(fixture.ctx as unknown as ExtensionCommandContext);
+  assert.ok(fixture.ctx.ui.statuses.at(-1)?.includes("↻ 3m"));
+  fixture.clock.advance(60_000);
+  await settle();
+  assert.ok(fixture.ctx.ui.statuses.at(-1)?.includes("↻ 2m"));
+  assert.equal(calls.length, 2, "countdown redraw must not fetch usage");
+});
+
+for (const status of [503, 401]) {
+  test(`manual HTTP ${status} restores the automatic check after backoff without an immediate retry`, async (t) => {
+    const { fetchImpl, calls } = scriptedFetch([
+      loginStep("tok-1"), usageStep(null, null, status),
+      ...(status === 401 ? [loginStep("tok-2")] : []), usageStep(),
+    ]);
+    const fixture = makeFixture(fetchImpl);
+    const runtime = runtimeOf(fixture, fetchImpl);
+    t.after(() => { runtime.shutdown(fixture.ctx as unknown as ExtensionContext); fixture.cleanup(); });
+    await runtime.runManualCheck(fixture.ctx as unknown as ExtensionCommandContext);
+    assert.equal(calls.length, 2, "manual failure must not add an immediate retry");
+    assert.equal(fixture.ctx.ui.notifications.at(-1)?.level, "error");
+    fixture.clock.advance(29_999);
+    await settle();
+    assert.equal(calls.length, 2);
+    fixture.clock.advance(1);
+    await settle();
+    assert.equal(calls.length, status === 401 ? 4 : 3);
+    assert.ok(fixture.ctx.ui.statuses.at(-1)?.includes("80%"));
+  });
+}
+
+for (const action of ["shutdown", "switch"] as const) {
+  for (const failed of [false, true]) {
+    test(`late manual ${failed ? "failure" : "success"} after ${action} cannot publish or restart timers`, async (t) => {
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => { release = resolve; });
+      const { fetchImpl, calls } = scriptedFetch([
+        loginStep("tok-1"), async () => { await gate; return usageStep(null, null, failed ? 503 : 200)(); },
+      ]);
+      const fixture = makeFixture(fetchImpl);
+      const runtime = runtimeOf(fixture, fetchImpl);
+      t.after(() => { runtime.shutdown(fixture.ctx as unknown as ExtensionContext); fixture.cleanup(); });
+      const pending = runtime.runManualCheck(fixture.ctx as unknown as ExtensionCommandContext);
+      await settle();
+      assert.equal(calls.length, 2);
+      if (action === "shutdown") runtime.shutdown(fixture.ctx as unknown as ExtensionContext);
+      else {
+        fixture.ctx.model = { provider: "plain" };
+        runtime.handleEvent(fixture.ctx as unknown as ExtensionContext, fixture.ctx.model);
+      }
+      const published = fixture.ctx.ui.statuses.length;
+      release();
+      await pending;
+      fixture.clock.advance(180_000);
+      await settle();
+      assert.equal(calls.length, 2);
+      assert.equal(fixture.ctx.ui.statuses.length, published);
+      assert.equal(fixture.ctx.ui.notifications.length, 0);
+    });
+  }
+}
+
+test("superseded manual result cannot replace the newer check's value or refresh timer", async (t) => {
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  const { fetchImpl, calls } = scriptedFetch([
+    loginStep("tok-1"), async () => { await gate; return usageStep()(); },
+    usageStep({ utilization: 40, resets_at: null }, null),
+    usageStep({ utilization: 60, resets_at: null }, null),
+  ]);
+  const fixture = makeFixture(fetchImpl);
+  const runtime = runtimeOf(fixture, fetchImpl);
+  t.after(() => { runtime.shutdown(fixture.ctx as unknown as ExtensionContext); fixture.cleanup(); });
+  const oldCheck = runtime.runManualCheck(fixture.ctx as unknown as ExtensionCommandContext);
+  await settle();
+  await runtime.runManualCheck(fixture.ctx as unknown as ExtensionCommandContext);
+  release();
+  await oldCheck;
+  assert.ok(fixture.ctx.ui.statuses.at(-1)?.includes("60%"));
+  assert.equal(fixture.ctx.ui.notifications.length, 1);
+  fixture.clock.advance(180_000);
+  await settle();
+  assert.equal(calls.length, 4);
+  assert.ok(fixture.ctx.ui.statuses.at(-1)?.includes("40%"));
+});
+
 test("index registers command and events on the ExtensionAPI", async () => {
   const events = new Map<string, (event: unknown, ctx: unknown) => void | Promise<void>>();
   const commands = new Map<string, unknown>();

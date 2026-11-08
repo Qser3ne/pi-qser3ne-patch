@@ -79,27 +79,31 @@ export async function fetchAccountUsage(options: FetchAccountUsageOptions): Prom
   const path = route.replace("{id}", encodeURIComponent(String(accountId)));
   const base = `${instanceBaseUrl.replace(/\/+$/, "")}${path.startsWith("/") ? path : `/${path}`}`;
   const url = route.includes("source=") ? base : `${base}?source=${usageSource}`;
-  let response: Response;
   try {
-    response = await fetchImpl(url, {
-      method,
-      signal,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "User-Agent": SUB2API_USER_AGENT,
-        Accept: "application/json",
-        ...(method === "POST" ? { "Content-Type": "application/json" } : {}),
-      },
-      ...(method === "POST" ? { body: "{}" } : {}),
-    });
-  } catch (error) {
-    if (signal.aborted) throw error;
-    throw new Error(`sub2api request failed: ${String(error)}`);
+    let response: Response;
+    try {
+      response = await fetchImpl(url, {
+        method,
+        signal,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "User-Agent": SUB2API_USER_AGENT,
+          Accept: "application/json",
+          ...(method === "POST" ? { "Content-Type": "application/json" } : {}),
+        },
+        ...(method === "POST" ? { body: "{}" } : {}),
+      });
+    } catch (error) {
+      if (signal.aborted) throw error;
+      throw new Error(`sub2api request failed: ${String(error)}`);
+    }
+    if (!response.ok) {
+      throw new Error(`sub2api responded ${response.status}`);
+    }
+    const payload: unknown = await response.json();
+    signal.throwIfAborted();
+    return parseAccountUsage(payload);
   } finally {
     clearTimeout(timer);
   }
-  if (!response.ok) {
-    throw new Error(`sub2api responded ${response.status}`);
-  }
-  return parseAccountUsage(await response.json());
 }

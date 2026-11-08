@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- Restore periodic quota refresh/countdown after manual Sub2API checks; recover automatic checking after failures without adding an immediate manual retry.
+- Keep Sub2API login and quota deadlines active through JSON body reading, preserve cancellation errors, and clean up request timers on all exits.
+- Add scheduling/late-result regressions and real local HTTP stalled-body timeout/cancellation coverage.
+
 - Keep herdr-core's root status working while current-session subagents run, with a running-child count rather than queued/workflow totals.
 - Observe background status snapshots and foreground tool/slash progress; preserve question/permission/auth waiting, restore native status on completion, and clean up on reload/shutdown.
 - Add projection, wrapper-order, session/RPC lifecycle, unified-entry and real Pi reporter regressions, plus an offline herdr-core acceptance driver.

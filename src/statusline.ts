@@ -351,10 +351,12 @@ export function createRuntime(deps: RuntimeDeps): Runtime {
       usageCache.set(targetCacheKey(resolution, settings), { usage, fetchedAt: now() });
       const raw = JSON.stringify(usage, null, 2);
       safeNotify(ctx, raw.length > 1_500 ? `${raw.slice(0, 1_500)}…` : raw, "info");
-      safeSetStatus(ctx, formatQuotaChip(resolution.providerId, usage, now()));
+      publishResult(ctx, resolution, settings, usage, gen);
     } catch (error) {
       if (gen !== generation || isStaleContextError(error)) return;
       safeNotify(ctx, `sub2api check failed: ${error instanceof Error ? error.message : String(error)}`, "error");
+      recordFailure(targetCacheKey(resolution, settings), errorChipText(error));
+      scheduleRefresh(ctx, settings, gen, FAILURE_BACKOFF_MS);
     }
   };
 
