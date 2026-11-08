@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+- Keep herdr-core's root status working while current-session subagents run, with a running-child count rather than queued/workflow totals.
+- Observe background status snapshots and foreground tool/slash progress; preserve question/permission/auth waiting, restore native status on completion, and clean up on reload/shutdown.
+- Add projection, wrapper-order, session/RPC lifecycle, unified-entry and real Pi reporter regressions, plus an offline herdr-core acceptance driver.
+
 ## [0.5.0] - 2026-11-04
 
 - Merge pi-daybreak and pi-token-speed with their complete Git histories into this repository; expose all features, including vendored pi-usage, through one `src/index.ts` extension entry.

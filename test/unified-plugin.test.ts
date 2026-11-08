@@ -23,6 +23,8 @@ function fixture(t: TestContext) {
   const statuses = new Map<string, string>();
   const entries: any[] = [];
   const events = new EventEmitter();
+  const programReports: any[] = [];
+  const terminal = { setProgramStatus: (status: unknown) => { programReports.push(status); } };
   const ctx = {
     model: { provider: "openai-codex", id: "gpt-6-sol", api: "openai-codex-responses", baseUrl: "https://chatgpt.com/backend-api", cost: { input: 1, output: 2, cacheRead: 0, cacheWrite: 0 } },
     mode: "tui", hasUI: true, cwd: agentDir, isIdle: () => true,
@@ -32,6 +34,7 @@ function fixture(t: TestContext) {
       theme: { fg: (_color: string, text: string) => text },
       setStatus: (key: string, value?: string) => value === undefined ? statuses.delete(key) : statuses.set(key, value),
       notify: () => {}, setFooter: () => assert.fail("unified plugin must not replace the footer"),
+      setWidget: (_key: string, factory: any) => { if (typeof factory === "function") factory({ terminal }); },
     },
   };
   install({
@@ -60,8 +63,40 @@ function fixture(t: TestContext) {
     await emit("session_shutdown", { reason: "quit" });
     rmSync(agentDir, { recursive: true, force: true });
   });
-  return { ctx, commands, statuses, entries, emit, request, advance: (ms: number) => { now += ms; } };
+  return { ctx, commands, statuses, entries, emit, request, events, terminal, programReports, advance: (ms: number) => { now += ms; } };
 }
+
+test("unified entry retains herdr background activity alongside existing feature lifecycles", async (t) => {
+  const previous = process.env.HC_TERMINAL_ID;
+  const previousStatus = process.env.PI_PROGRAM_STATUS;
+  const tty = Object.getOwnPropertyDescriptor(process.stdout, "isTTY");
+  process.env.HC_TERMINAL_ID = "composition";
+  delete process.env.PI_PROGRAM_STATUS;
+  Object.defineProperty(process.stdout, "isTTY", { value: true, configurable: true });
+  t.after(() => {
+    if (previous === undefined) delete process.env.HC_TERMINAL_ID; else process.env.HC_TERMINAL_ID = previous;
+    if (previousStatus === undefined) delete process.env.PI_PROGRAM_STATUS; else process.env.PI_PROGRAM_STATUS = previousStatus;
+    if (tty) Object.defineProperty(process.stdout, "isTTY", tty); else Reflect.deleteProperty(process.stdout, "isTTY");
+  });
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const h = fixture(t);
+  h.events.on("subagents:rpc:v1:request", (request) => h.events.emit(`subagents:rpc:v1:reply:${request.requestId}`, {
+    version: 1, requestId: request.requestId, success: true,
+    data: { asyncSnapshot: {
+      kind: "pi-subagents.async-status-snapshot", version: 1,
+      omitted: { runs: 0, children: 0, byteLimitExceeded: false },
+      runs: [{ id: "child", kind: "subagent", state: "running", label: "worker" }],
+    } },
+  }));
+  await h.emit("session_start", { reason: "reload" });
+  t.mock.timers.tick(25);
+  h.terminal.setProgramStatus({ state: "done", app: "pi" });
+  assert.deepEqual(h.programReports.at(-1), { state: "working", app: "pi", message: "正在工作的 subagent：1" });
+  assert.ok(h.commands.has("daybreak") && h.commands.has("fast"));
+  await h.emit("session_shutdown", { reason: "reload" });
+  assert.deepEqual(h.programReports.at(-1), { state: "done", app: "pi" });
+  assert.equal(h.statuses.size, 0);
+});
 
 test("unified entry composes Daybreak and Fast routing without losing request fields", async (t) => {
   const h = fixture(t);

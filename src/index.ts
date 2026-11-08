@@ -5,6 +5,7 @@ import { createCodexAccountProvider } from "./codex-accounts.ts";
 import daybreak from "./daybreak.ts";
 import tokenSpeedExtension from "./token-speed.ts";
 import usageExtension from "../vendor/pi-usage/index.ts";
+import herdrSubagents from "./herdr-subagents.ts";
 
 export { createRuntime } from "./runtime.ts";
 
@@ -36,4 +37,5 @@ export default function qser3nePatchExtension(pi: ExtensionAPI): void {
     },
   });
   usageExtension(pi);
+  herdrSubagents(pi);
 }
