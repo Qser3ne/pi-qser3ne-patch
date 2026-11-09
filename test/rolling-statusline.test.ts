@@ -50,7 +50,7 @@ test("native segment renders icon and cached value between context and time, fit
   }
   config.segmentText.usage24h.prefix = "◎ ";
   assert.match(stripVTControlCharacters(renderStatusline(240, ctx, footerData, theme, config, { ...runtime, rollingUsageText: "unavailable" })), /◎ unavailable/);
-  assert.match(stripVTControlCharacters(renderStatusline(240, ctx, footerData, theme, config, { ...runtime, rollingUsageText: "~1.0M CH —" })), /◎ ~1\.0M CH —/);
+  assert.match(stripVTControlCharacters(renderStatusline(240, ctx, footerData, theme, config, { ...runtime, rollingUsageText: "1.0M CH —" })), /◎ 1\.0M CH —/);
 });
 
 test("configuration loading never rewrites legacy documents; settings command retains hiding and errors", async t => {

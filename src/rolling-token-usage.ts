@@ -17,7 +17,7 @@ export function formatRollingUsage(report?: UsageReport, failed = false): string
   if (failed) return "unavailable";
   if (!report) return "…";
   const rate = cacheHitRate(report.usage);
-  return `${report.warnings.length ? "~" : ""}${compactCount(report.usage.totalTokens)} CH ${rate === undefined ? "—" : `${(rate * 100).toFixed(1)}%`}`;
+  return `${compactCount(report.usage.totalTokens)} CH ${rate === undefined ? "—" : `${(rate * 100).toFixed(1)}%`}`;
 }
 
 type Options = {

@@ -28,13 +28,21 @@ test("format uses one aggregate cache ratio and compact totals without 24h text"
   assert.equal(formatRollingUsage(), "…");
   assert.equal(formatRollingUsage(report()), "0 CH —");
   assert.equal(formatRollingUsage(undefined, true), "unavailable");
-  r.warnings.push("partial scan");
-  assert.equal(formatRollingUsage(r), "~12.3M CH 85.2%");
   const weighted = aggregate([
     { key: "1", timestamp: NOW, source: "a", kind: "assistant", usage: { ...usage(100), input: 10, cacheRead: 90 } },
     { key: "2", timestamp: NOW, source: "a", kind: "assistant", usage: { ...usage(900), input: 900 } },
   ], range);
   assert.equal(formatRollingUsage(weighted), "1.0K CH 9.0%");
+});
+
+test("warning reports show plain totals and cache rate without changing warning details", () => {
+  const r = report(491_900_000);
+  r.usage.input = 100;
+  r.usage.cacheRead = 900;
+  r.usage.output -= 1_000;
+  r.warnings.push("partial scan", "cache write failed", "subagent coordination unavailable");
+  assert.equal(formatRollingUsage(r), "491.9M CH 90.0%");
+  assert.deepEqual(r.warnings, ["partial scan", "cache write failed", "subagent coordination unavailable"]);
 });
 
 test("controller freezes model scope, roots and cutoff, then coalesces events and periodic updates", async t => {
