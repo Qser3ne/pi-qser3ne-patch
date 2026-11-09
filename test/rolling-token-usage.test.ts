@@ -108,6 +108,37 @@ test("failure is visibly unavailable, then recovers; non-TUI never scans", async
   assert.equal(controller.getText(), "42 CH —");
 });
 
+for (const outcome of ["success", "failure"] as const) test(`live scope changes without model_select discard a stale ${outcome} and queue one replacement`, async t => {
+  const pending: Array<{ resolve(r: UsageReport): void; reject(error: Error): void }> = [];
+  const calls: Parameters<typeof collectUsage>[0][] = [];
+  let running = 0, maximum = 0;
+  const controller = createRollingUsageController({ agentDir: "/agent", collect: options => {
+    calls.push(options); maximum = Math.max(maximum, ++running);
+    return new Promise<UsageReport>((resolve, reject) => pending.push({
+      resolve: r => { running--; resolve(r); }, reject: error => { running--; reject(error); },
+    }));
+  } });
+  t.after(() => controller.dispose());
+  const ctx = context();
+  let scoped = ctx.scopedModels;
+  Object.defineProperty(ctx, "scopedModels", { get: () => scoped });
+  const published: string[] = [];
+  controller.start(ctx, () => published.push(controller.getText()));
+  // /models updates this live getter without emitting model_select or refresh.
+  scoped = [{ model: { provider: "new", id: "scope" } }] as unknown as ExtensionContext["scopedModels"];
+  const old = pending.shift()!;
+  if (outcome === "success") old.resolve(report(999)); else old.reject(Error("old-scope failure"));
+  await flush();
+  assert.equal(controller.getText(), "…");
+  assert.equal(published.includes("999 CH —"), false);
+  assert.equal(published.includes("unavailable"), false);
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls[1].allowedModels, [{ provider: "new", id: "scope" }]);
+  assert.equal(maximum, 1);
+  pending.shift()!.resolve(report(42)); await flush();
+  assert.equal(controller.getText(), "42 CH —");
+});
+
 test("temporary model catalogue failure invalidates stale scans but the next refresh recovers", async t => {
   t.mock.timers.enable({ apis: ["setTimeout", "setInterval"] });
   let broken = false;

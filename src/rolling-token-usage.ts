@@ -59,6 +59,24 @@ export function createRollingUsageController(options: Options) {
       .map(({ provider, id }) => ({ provider, id }));
     return { ctx, models, scope: JSON.stringify(models) };
   }
+  function publishCurrent(current: Owner, nextText: string): void {
+    if (owner !== current || !activeContext) return;
+    // /models mutates the live scopedModels getter without model_select.
+    // Never publish success OR failure for a scope that changed during I/O.
+    let latest: Owner;
+    try { latest = select(activeContext); } catch {
+      owner = undefined;
+      publish("unavailable");
+      return;
+    }
+    if (latest.scope !== current.scope) {
+      owner = latest;
+      dirty = true;
+      publish("…");
+      return;
+    }
+    publish(nextText);
+  }
   async function run(): Promise<void> {
     if (!owner) return;
     if (inFlight) { dirty = true; return; }
@@ -71,9 +89,9 @@ export function createRollingUsageController(options: Options) {
         cacheDir: join(options.agentDir, "pi-token-usage", "cache-v1"),
         range: parseRange("24h", now()), memoryCache, allowedModels: current.models,
       });
-      if (owner === current) publish(formatRollingUsage(report));
+      publishCurrent(current, formatRollingUsage(report));
     } catch {
-      if (owner === current) publish(formatRollingUsage(undefined, true));
+      publishCurrent(current, formatRollingUsage(undefined, true));
     } finally {
       inFlight = false;
       if (dirty && owner) void run();
