@@ -17,8 +17,9 @@
 | [daybreak-blue](docs/archive/daybreak-blue/archive.md) | Daybreak 命令、参数与确认状态 |
 | [token-speed](docs/archive/token-speed/archive.md) | tok/s、TTFT 与统计口径 |
 | [herdr-subagents](docs/archive/herdr-subagents/archive.md) | herdr 工作状态与运行中的子代理数 |
+| [rolling-token-status](docs/archive/rolling-token-status/archive.md) | 主状态栏近 24h token 总量与缓存率 |
 
-安装/验收操作页：[Daybreak](docs/daybreak.md)、[速度](docs/token-speed.md)、[herdr](docs/herdr-subagents.md)。
+安装/验收操作页：[Daybreak](docs/daybreak.md)、[速度](docs/token-speed.md)、[herdr](docs/herdr-subagents.md)、[近 24h 状态栏](docs/rolling-token-status.md)。
 
 ## 安装
 
@@ -42,7 +43,18 @@ pi install git:github.com/Qser3ne/pi-qser3ne-patch
 }
 ```
 
-加载后检查 `/fast`、`/usage` 没有重复数字后缀。兼容模块来源、MIT 许可和再生操作见 [vendor/pi-usage/README.md](vendor/pi-usage/README.md)。
+本包同时集成兼容版 pi-statusline，继续读取原 `pi-statusline.json`。已安装独立状态栏时，保留实际版本并禁用其扩展入口：
+
+```json
+{
+  "source": "npm:@narumitw/pi-statusline@0.50.2",
+  "extensions": []
+}
+```
+
+主栏示例：`🪟 ctx 42.0%/272k  📊 12.3M CH 85.2%  🕒 16:42`。独立 `pi-token-usage` 保持启用，不会重复注册 `/token`。
+
+加载后检查 `/fast`、`/usage`、`/statusline` 没有重复数字后缀。来源、许可证和再生操作见 [pi-usage](vendor/pi-usage/README.md)、[pi-statusline](vendor/pi-statusline/README.md) 和 [纯 token 统计模块](vendor/pi-token-usage/README.md)。启用本地开发副本与固定 Git 版本的区别见 [状态栏操作页](docs/rolling-token-status.md)。
 
 ## Codex 账号操作
 
@@ -98,4 +110,4 @@ npm test
 
 测试包括单元、统一入口/生产加载与模拟 SSE/WebSocket 集成验证，不调用真实账号。herdr 的真实终端离线验收步骤见 [验收页](docs/herdr-subagents.md)。修改开发目录不会自动更新 Pi 管理的 Git 安装副本；需更新对应安装来源后再重载。
 
-版本历史见 [CHANGELOG.md](CHANGELOG.md)。卸载时使用 `pi remove <pi list 中的完整来源>`；随后可恢复独立 pi-usage 入口并 `/reload`。不要为卸载本包而删除个人凭据与偏好文件。
+版本历史见 [CHANGELOG.md](CHANGELOG.md)。卸载时使用 `pi remove <pi list 中的完整来源>`；随后可恢复独立 pi-usage、pi-statusline 入口并 `/reload`。不要为卸载本包而删除个人凭据与偏好文件。

@@ -29,21 +29,37 @@ test("production-only package loads through Pi's bundled loader and is selectabl
     assert.equal(manifest.name, "pi-qser3ne-patch");
     assert.equal(manifest.repository.url, "https://github.com/Qser3ne/pi-qser3ne-patch.git");
     const upstream = dirname(require.resolve("@narumitw/pi-usage/package.json"));
-    const settingsManager = host.SettingsManager.inMemory({ packages: [{ source: upstream, extensions: [] }, pkg] });
+    const statuslineUpstream = dirname(require.resolve("@narumitw/pi-statusline/package.json"));
+    const settingsManager = host.SettingsManager.inMemory({ packages: [
+      { source: upstream, extensions: [] }, { source: statuslineUpstream, extensions: [] }, pkg,
+    ] });
     const manager = new host.DefaultPackageManager({ cwd: temp, agentDir: temp, settingsManager });
     const resources = await manager.resolve(async () => "error");
     assert.ok(resources.extensions.some((entry: { path: string; enabled: boolean }) => entry.path.startsWith(upstream) && !entry.enabled));
+    assert.ok(resources.extensions.some((entry: { path: string; enabled: boolean }) => entry.path.startsWith(statuslineUpstream) && !entry.enabled));
     const paths = resources.extensions.filter((entry: { enabled: boolean }) => entry.enabled).map((entry: { path: string }) => entry.path);
     assert.equal(paths.length, 1, "all features must load through one unified entry");
     const loaded = await host.discoverAndLoadExtensions(paths, temp, temp);
     assert.deepEqual(loaded.errors, [], "the real production loader must not skip the extension");
     assert.equal(loaded.extensions.length, 1);
-    for (const name of ["daybreak", "fast", "usage", "openai-usage", "sub2api-usage"]) {
+    for (const name of ["daybreak", "fast", "usage", "openai-usage", "sub2api-usage", "statusline"]) {
       assert.equal(loaded.extensions.filter((ext: { commands: Map<string, unknown> }) => ext.commands.has(name)).length, 1, `exactly one /${name}`);
     }
     const fastCommands = loaded.extensions.flatMap((ext: { commands: Map<string, unknown> }) => [...ext.commands.keys()].filter((name) => name === "fast"));
     assert.equal(fastCommands.length, 1, "the package must expose exactly one original /fast");
     assert.ok(loaded.extensions.some((ext: { commands: Map<string, unknown> }) => ext.commands.has("usage")));
+    assert.equal(loaded.extensions[0].commands.has("token"), false, "keep independent token commands separate");
+    // Exercise the generated source and lazy command module through the actual
+    // bundled loader, without physical Pi peers or the standalone statusline.
+    const notifications: string[] = [];
+    const statusContext = { mode: "rpc", hasUI: true, sessionManager: {}, ui: {
+      setStatus() {}, notify: (message: string) => notifications.push(message),
+    } };
+    loaded.runtime.getThinkingLevel = () => "high"; // Mode action normally supplied by runner.initialize().
+    const startStatusline = loaded.extensions[0].handlers.get("session_start").at(-1);
+    await startStatusline({ type: "session_start" }, statusContext);
+    await loaded.extensions[0].commands.get("statusline").handler("help", statusContext);
+    assert.ok(notifications.some(message => message.includes("usage24h") && message.includes("24 hours")));
     const registrations = loaded.runtime.pendingNativeProviderRegistrations;
     assert.equal(registrations.length, 1);
     assert.equal(registrations[0].provider.id, "openai-codex-1");

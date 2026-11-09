@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- Integrate a pinned, MIT-attributed pi-statusline 0.50.2 compatibility source with a native `usage24h` segment after context: `📊 12.3M CH 85.2%`; preserve settings, menus, palettes and other extension statuses.
+- Reuse the pinned pi-token-usage pure collector for local cross-session rolling 24-hour totals, current-model-list filtering, fork/subagent deduplication and aggregate input cache hit rate. Refresh asynchronously after completed turns and every minute; distinguish loading, empty, partial and unavailable data.
+- Add old-layout migration/opt-out, responsive/color-mode, menu persistence, stale-result/single-flight, provenance regeneration and production-only loader regressions. Disable the standalone pi-statusline extension entry before activating this version; keep independent /token commands enabled.
+
 - Restore periodic quota refresh/countdown after manual Sub2API checks; recover automatic checking after failures without adding an immediate manual retry.
 - Keep Sub2API login and quota deadlines active through JSON body reading, preserve cancellation errors, and clean up request timers on all exits.
 - Add scheduling/late-result regressions and real local HTTP stalled-body timeout/cancellation coverage.
