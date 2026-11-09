@@ -21,6 +21,7 @@ function fixture(t: TestContext) {
   const handlers = new Map<string, Array<(event: any, ctx: any) => any>>();
   const commands = new Map<string, { handler: (args: string, ctx: any) => any }>();
   const statuses = new Map<string, string>();
+  const footers: unknown[] = [];
   const entries: any[] = [];
   const events = new EventEmitter();
   const programReports: any[] = [];
@@ -33,12 +34,14 @@ function fixture(t: TestContext) {
     ui: {
       theme: { fg: (_color: string, text: string) => text },
       setStatus: (key: string, value?: string) => value === undefined ? statuses.delete(key) : statuses.set(key, value),
-      notify: () => {}, setFooter: () => assert.fail("unified plugin must not replace the footer"),
+      notify: () => {}, setFooter: (factory: unknown) => { footers.push(factory); },
       setWidget: (_key: string, factory: any) => { if (typeof factory === "function") factory({ terminal }); },
     },
   };
   install({
     registerProvider: () => {},
+    getThinkingLevel: () => "high",
+    exec: async () => ({ stdout: "", stderr: "", code: 0, killed: false }),
     on: (name: string, handler: (event: any, ctx: any) => any) => {
       handlers.set(name, [...(handlers.get(name) ?? []), handler]);
       return () => {};
@@ -63,8 +66,17 @@ function fixture(t: TestContext) {
     await emit("session_shutdown", { reason: "quit" });
     rmSync(agentDir, { recursive: true, force: true });
   });
-  return { ctx, commands, statuses, entries, emit, request, events, terminal, programReports, advance: (ms: number) => { now += ms; } };
+  return { ctx, commands, statuses, entries, emit, request, events, terminal, programReports, footers, advance: (ms: number) => { now += ms; } };
 }
+
+test("unified entry owns one compatible statusline without duplicating token commands", async t => {
+  const h = fixture(t);
+  assert.ok(h.commands.has("statusline"));
+  assert.equal(h.commands.has("token"), false);
+  assert.equal(h.commands.has("token-usage"), false);
+  await h.emit("session_start");
+  assert.equal(h.footers.filter(value => typeof value === "function").length, 1);
+});
 
 test("unified entry retains herdr background activity alongside existing feature lifecycles", async (t) => {
   const previous = process.env.HC_TERMINAL_ID;

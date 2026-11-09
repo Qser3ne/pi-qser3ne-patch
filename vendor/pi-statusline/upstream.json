@@ -1,0 +1,36 @@
+{
+  "package": "@narumitw/pi-statusline",
+  "version": "0.50.2",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/narumiruna/pi-extensions",
+    "directory": "packages/pi-statusline"
+  },
+  "sha256": {
+    "ansi.ts": "c22b28c165de57a12ec10b678c2aec73d6fe129c9c8b1e6cbd441565f496af61",
+    "command-contract.ts": "193e9312c4b90879a804fb6be2c21b72b14f462e7e442d52a0867a45fba2245b",
+    "commands.ts": "a89e1cf752b521421113cc65a5193d6bbaf3bba876bb93a86500420a1125062d",
+    "directory.ts": "29f505fe74ac8a60d26f7e72e367d55f64002fef63f60d17fcda65cb83d1cc2a",
+    "extension-status.ts": "f4feb3e3fc3fc22851e7380c46c178074c5d5dbdf79c9d5f274ae2b2dc3becdf",
+    "git-status.ts": "0975ceda8eb592e802b46c0ccbb2b422cb1ecdcb14d1cb6e3142d1295d807b70",
+    "index.ts": "c9301d49ba255ee60e2e0781760459090a50024d54da5b509bf3b04c374063a2",
+    "information-profiles.ts": "53ef75833905be6b39f398157b6321c50ccd8a309c085beae601bded302647a1",
+    "powerline.ts": "7cd8d1178a8225d1d9193f2bc8ab81e5e805f33ff75861dd187ce074aca11eaf",
+    "presets/candy.ts": "0650b962a95568727c865e3545fc9a549db71d73b1d694f8e49d0b03605ab020",
+    "presets/create-ramp.ts": "f91b14b760bc4676c0214d36153827f223d8d5f8155f05691c53acefdec5f7b5",
+    "presets/custom.ts": "fdf542d91371b844616c8bef1742f4e1ad916b2234f20a8b09c570b773826f87",
+    "presets/forest.ts": "8612be89ee790f1d181eac376ce8c6375efc38ebbab7aef353b07164c04f3a22",
+    "presets/index.ts": "e4f07b41d1237e686f2785a14b15cfa3019a1ee09a05757e787d17b17bad6010",
+    "presets/mono.ts": "b6589a537935b5912f8996af5e8d6b6543fa920721c6d08c14aa784417c9b3fb",
+    "presets/neon.ts": "9194f86bf350648d0646f4cee25dff0ff96eb0211378dfa8b7ebdeef00651fb8",
+    "presets/ocean.ts": "f29d5a4f5689d5b788b89bc26af6c36b560aea2fa28fa7a4461190a6fd474d59",
+    "presets/sunset.ts": "ea6f58032603bf74536a349792179eabdca24e685a9154069ef315ec4d5aa32d",
+    "presets/tokyo-night.ts": "432d1750453d951e8ca5d6f76407b4670d6e8078dfb43077ad8dbc66a325bf31",
+    "presets/types.ts": "d4dda05c1359a4d70bf74a4f0400ff6785ebc221a4a3c06a451b8446fb6df7f3",
+    "render.ts": "61441fd6d5bade8816e8d6949f272463841bbae447b6e774dd1c2a3f1e5065a7",
+    "settings.ts": "0c7ab5cec82ac1c61f46a89d5a4c2a6742db8de777cbf753fc18bbcbd16606be",
+    "statusline.ts": "030773322bc3927a1a43e970ed08f6ff6f20951338816e34a0697616dde9cfcc",
+    "types.ts": "2cbf4475368f348c45110c9847e65bcdb20a81e71824048e0d2bd42454fec5cc",
+    "usage.ts": "debd8c3d02190c7b900adfbd56e4fe2c70c00b37c991098b105e18064828c670"
+  }
+}

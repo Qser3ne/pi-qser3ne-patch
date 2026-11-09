@@ -6,6 +6,7 @@ import daybreak from "./daybreak.ts";
 import tokenSpeedExtension from "./token-speed.ts";
 import usageExtension from "../vendor/pi-usage/index.ts";
 import herdrSubagents from "./herdr-subagents.ts";
+import statusline from "../vendor/pi-statusline/src/statusline.ts";
 
 export { createRuntime } from "./runtime.ts";
 
@@ -38,4 +39,5 @@ export default function qser3nePatchExtension(pi: ExtensionAPI): void {
   });
   usageExtension(pi);
   herdrSubagents(pi);
+  statusline(pi);
 }

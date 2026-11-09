@@ -5,7 +5,7 @@
     "type": "git",
     "url": "https://github.com/Qser3ne/pi-qser3ne-patch.git"
   },
-  "description": "Unified Pi extension for Codex accounts, Fast mode, Daybreak Blue, subscription quotas and token speed.",
+  "description": "Unified Pi extension for Codex accounts, Fast mode, Daybreak Blue, subscription quotas, token speed and rolling 24-hour statusline usage.",
   "type": "module",
   "private": true,
   "keywords": [
@@ -30,7 +30,9 @@
     "test:unit": "node --experimental-strip-types --test test/*.test.ts tests/daybreak.test.mjs",
     "test:integration": "node --experimental-strip-types --test tests/daybreak.integration.test.mjs",
     "typecheck": "tsc --noEmit",
-    "vendor:pi-usage": "node scripts/vendor-pi-usage.mjs"
+    "vendor:pi-usage": "node scripts/vendor-pi-usage.mjs",
+    "vendor:pi-statusline": "node scripts/vendor-pi-statusline.mjs",
+    "vendor:token-usage": "node scripts/vendor-token-usage.mjs"
   },
   "peerDependencies": {
     "@earendil-works/pi-ai": "*",

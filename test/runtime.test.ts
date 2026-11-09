@@ -536,8 +536,8 @@ test("index registers command and events on the ExtensionAPI", async () => {
   for (const name of ["session_start", "session_tree", "model_select", "turn_start", "session_shutdown"]) {
     assert.ok(events.has(name), `missing event handler for ${name}`);
   }
-  assert.equal(commands.size, 5);
-  for (const name of ["daybreak", "fast", "usage"]) assert.ok(commands.has(name));
+  assert.equal(commands.size, 6);
+  for (const name of ["daybreak", "fast", "usage", "statusline"]) assert.ok(commands.has(name));
   assert.ok(commands.has("sub2api-usage"));
   assert.ok(commands.has("openai-usage"));
   const definition = commands.get("sub2api-usage") as { handler: (args: string, ctx: unknown) => Promise<void> };
