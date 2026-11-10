@@ -10,6 +10,8 @@ import { aggregate } from "../vendor/pi-token-usage/query.ts";
 import type { UsageReport } from "../vendor/pi-token-usage/types.ts";
 
 const NOW = Date.parse("2026-11-09T12:00:00Z");
+const localDate = new Date(NOW);
+const MIDNIGHT = new Date(localDate.getFullYear(), localDate.getMonth(), localDate.getDate()).getTime();
 const range = { start: NOW - 86400000, end: NOW, amount: 24, unit: "h" as const };
 const usage = (totalTokens = 0) => ({ input: 0, output: totalTokens, cacheRead: 0, cacheWrite: 0, totalTokens });
 function report(total = 0): UsageReport {
@@ -61,7 +63,7 @@ test("controller freezes model scope, roots and cutoff, then coalesces events an
   assert.deepEqual(calls[0].roots, ["/agent/sessions", "/custom/sessions"]);
   assert.deepEqual(calls[0].allowedModels, [{ provider: "a", id: "m" }]);
   assert.equal(calls[0].cacheDir, "/agent/pi-token-usage/cache-v1");
-  assert.deepEqual(calls[0].range, range);
+  assert.deepEqual(calls[0].range, { start: MIDNIGHT, end: NOW, amount: (NOW - MIDNIGHT) / 3600000, unit: "h" });
   controller.refresh(ctx); controller.refresh(ctx); controller.refresh(ctx);
   t.mock.timers.tick(250); await flush();
   assert.equal(calls.length, 2);
@@ -73,6 +75,75 @@ test("controller freezes model scope, roots and cutoff, then coalesces events an
   controller.dispose();
   t.mock.timers.tick(120000); await flush();
   assert.equal(calls.length, 3);
+});
+
+for (const [zone, cutoff, midnight, hours] of [
+  ["UTC", "2026-11-09T12:00:00Z", "2026-11-09T00:00:00Z", 12],
+  ["Asia/Shanghai", "2026-11-09T12:00:00Z", "2026-11-08T16:00:00Z", 20],
+  ["Asia/Shanghai", "2026-11-08T16:00:00Z", "2026-11-08T16:00:00Z", 0],
+  ["America/New_York", "2026-03-08T16:00:00Z", "2026-03-08T05:00:00Z", 11],
+  ["America/New_York", "2026-11-01T17:00:00Z", "2026-11-01T04:00:00Z", 13],
+] as const) test(`today window uses local midnight in ${zone} at ${cutoff}`, async t => {
+  const originalZone = process.env.TZ;
+  process.env.TZ = zone;
+  t.after(() => { if (originalZone === undefined) delete process.env.TZ; else process.env.TZ = originalZone; });
+  const calls: Parameters<typeof collectUsage>[0][] = [];
+  const controller = createRollingUsageController({ agentDir: "/agent", now: () => Date.parse(cutoff),
+    collect: async options => { calls.push(options); return report(); } });
+  t.after(() => controller.dispose());
+  controller.start(context(), () => {});
+  await flush();
+  assert.deepEqual(calls[0].range, { start: Date.parse(midnight), end: Date.parse(cutoff), amount: hours, unit: "h" });
+});
+
+test("periodic refresh resets the today window after local midnight", async t => {
+  const before = new Date(2026, 10, 9, 23, 59, 30).getTime();
+  t.mock.timers.enable({ apis: ["setInterval", "Date"], now: before });
+  const calls: Parameters<typeof collectUsage>[0][] = [];
+  const controller = createRollingUsageController({ agentDir: "/agent", collect: async options => {
+    calls.push(options); return report();
+  } });
+  t.after(() => controller.dispose());
+  controller.start(context(), () => {});
+  await flush();
+  assert.equal(calls[0].range.start, new Date(2026, 10, 9).getTime());
+  t.mock.timers.tick(60000); await flush();
+  assert.equal(calls.length, 2);
+  assert.equal(calls[1].range.start, new Date(2026, 10, 10).getTime());
+  assert.equal(calls[1].range.end, before + 60000);
+  assert.equal(calls[1].range.amount, 30 / 3600);
+});
+
+test("today totals and CH include midnight and cutoff but exclude yesterday and future records", async t => {
+  const root = await mkdtemp(join(tmpdir(), "today-tokens-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const sessions = join(root, "sessions"); await mkdir(sessions);
+  const midnight = MIDNIGHT;
+  const entries = [
+    { type: "session", version: 3, id: "today", cwd: root, timestamp: new Date(midnight - 1000).toISOString() },
+    ...[
+      ["yesterday", midnight - 1, 100, 900],
+      ["midnight", midnight, 20, 80],
+      ["cutoff", NOW, 80, 20],
+      ["future", NOW + 1, 100, 900],
+    ].map(([id, timestamp, input, cacheRead]) => ({ type: "message", id,
+      timestamp: new Date(timestamp as number).toISOString(), message: { role: "assistant", provider: "a", model: "m", timestamp,
+        usage: { input, cacheRead, cacheWrite: 0, output: 0, totalTokens: (input as number) + (cacheRead as number) } } })),
+  ];
+  await writeFile(join(sessions, "today.jsonl"), entries.map(entry => JSON.stringify(entry)).join("\n") + "\n");
+  const ctx = context();
+  ctx.sessionManager.getSessionDir = () => sessions;
+  let collected: UsageReport | undefined;
+  let finish!: () => void;
+  const done = new Promise<void>(resolve => { finish = resolve; });
+  const controller = createRollingUsageController({ agentDir: root, now: () => NOW, collect: async options => {
+    try { collected = await collectUsage(options); return collected; } finally { finish(); }
+  } });
+  t.after(() => controller.dispose());
+  controller.start(ctx, () => {});
+  await done; await flush();
+  assert.equal(collected?.recordCount, 2);
+  assert.equal(controller.getText(), "200 CH 50.0%");
 });
 
 test("slow scans remain single-flight and stale session/model results are never published", async t => {

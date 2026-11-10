@@ -2,7 +2,7 @@ import { join } from "node:path";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { SnapshotCache } from "../vendor/pi-token-usage/cache.ts";
 import { collectUsage } from "../vendor/pi-token-usage/collector.ts";
-import { cacheHitRate, parseRange } from "../vendor/pi-token-usage/query.ts";
+import { cacheHitRate } from "../vendor/pi-token-usage/query.ts";
 import type { ModelIdentity, UsageReport } from "../vendor/pi-token-usage/types.ts";
 
 function compactCount(value: number): string {
@@ -84,10 +84,13 @@ export function createRollingUsageController(options: Options) {
     inFlight = true;
     dirty = false;
     try {
+      const end = now();
+      // Calendar midnight in the host's local timezone, including DST changes.
+      const start = new Date(end).setHours(0, 0, 0, 0);
       const report = await collect({
         roots: [join(options.agentDir, "sessions"), current.ctx.sessionManager.getSessionDir()],
         cacheDir: join(options.agentDir, "pi-token-usage", "cache-v1"),
-        range: parseRange("24h", now()), memoryCache, allowedModels: current.models,
+        range: { start, end, amount: (end - start) / 3600000, unit: "h" }, memoryCache, allowedModels: current.models,
       });
       publishCurrent(current, formatRollingUsage(report));
     } catch {

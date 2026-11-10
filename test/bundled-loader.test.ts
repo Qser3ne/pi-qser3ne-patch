@@ -59,7 +59,7 @@ test("production-only package loads through Pi's bundled loader and is selectabl
     const startStatusline = loaded.extensions[0].handlers.get("session_start").at(-1);
     await startStatusline({ type: "session_start" }, statusContext);
     await loaded.extensions[0].commands.get("statusline").handler("help", statusContext);
-    assert.ok(notifications.some(message => message.includes("usage24h") && message.includes("24 hours")));
+    assert.ok(notifications.some(message => message.includes("usage24h") && message.includes("since local midnight")));
     const registrations = loaded.runtime.pendingNativeProviderRegistrations;
     assert.equal(registrations.length, 1);
     assert.equal(registrations[0].provider.id, "openai-codex-1");

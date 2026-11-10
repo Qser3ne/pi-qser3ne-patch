@@ -17,9 +17,9 @@
 | [daybreak-blue](docs/archive/daybreak-blue/archive.md) | Daybreak 命令、参数与确认状态 |
 | [token-speed](docs/archive/token-speed/archive.md) | tok/s、TTFT 与统计口径 |
 | [herdr-subagents](docs/archive/herdr-subagents/archive.md) | herdr 工作状态与运行中的子代理数 |
-| [rolling-token-status](docs/archive/rolling-token-status/archive.md) | 主状态栏近 24h token 总量与缓存率 |
+| [rolling-token-status](docs/archive/rolling-token-status/archive.md) | 主状态栏今日 token 总量与缓存率 |
 
-安装/验收操作页：[Daybreak](docs/daybreak.md)、[速度](docs/token-speed.md)、[herdr](docs/herdr-subagents.md)、[近 24h 状态栏](docs/rolling-token-status.md)。
+安装/验收操作页：[Daybreak](docs/daybreak.md)、[速度](docs/token-speed.md)、[herdr](docs/herdr-subagents.md)、[今日状态栏](docs/rolling-token-status.md)。
 
 ## 安装
 

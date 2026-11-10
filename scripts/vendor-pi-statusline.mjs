@@ -37,7 +37,7 @@ function patch(file, code) {
       config.segments = segments;`);
   }
   if (file === "commands.ts") {
-    code = once(code, '  context: "Current context-window usage",', '  context: "Current context-window usage",\n  usage24h: "Local rolling 24-hour token total and aggregate cache hit rate",');
+    code = once(code, '  context: "Current context-window usage",', '  context: "Current context-window usage",\n  usage24h: "Local token total and aggregate cache hit rate since local midnight",');
     code = once(code, '  return { parsed, rawDocument };', `  // Persist the effective migrated layout and an explicit presentation marker.
   // Subsequent hide/reorder saves must not trigger the old-layout migration again.
   parsed.segments = [...current.config.segments];
@@ -46,7 +46,7 @@ function patch(file, code) {
     usage24h: { ...current.config.segmentText.usage24h },
   };
   return { parsed, rawDocument };`);
-    code = once(code, '      "Custom layout can show, hide, reorder, or split data segments across rows.",', '      "Custom layout can show, hide, reorder, or split data segments across rows.",\n      "usage24h: saved local usage for current model list over the rolling last 24 hours; CH is aggregate input cache hit rate.",');
+    code = once(code, '      "Custom layout can show, hide, reorder, or split data segments across rows.",', '      "Custom layout can show, hide, reorder, or split data segments across rows.",\n      "usage24h: saved local usage for current model list since local midnight; CH is aggregate input cache hit rate.",');
   }
   if (file === "render.ts") {
     code = once(code, '  turnCount: number;', '  rollingUsageText?: string;\n  turnCount: number;');
@@ -93,4 +93,4 @@ function visit(dir) {
 visit(join(source, "src"));
 writeFileSync(join(target, "LICENSE"), readFileSync(join(source, "LICENSE")));
 writeFileSync(join(target, "upstream.json"), JSON.stringify({ package: manifest.name, version: manifest.version, repository: manifest.repository, sha256: hashes }, null, 2) + "\n");
-console.log("Generated pi-statusline 0.50.2 with native rolling token segment.");
+console.log("Generated pi-statusline 0.50.2 with native today token segment.");

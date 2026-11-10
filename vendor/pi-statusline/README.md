@@ -6,7 +6,7 @@ Regenerate after `npm ci` with `npm run vendor:pi-statusline`. This copies the n
 
 Assertion-guarded patches in `scripts/vendor-pi-statusline.mjs` add:
 
-- Native configurable `usage24h` segment, icon `📊 `, runtime palette block, responsive retention below tools but above cwd.
+- Native configurable `usage24h` segment (legacy key retained), showing token totals and cache hit rate since local midnight, icon `📊 `, runtime palette block, responsive retention below tools but above cwd.
 - Async `src/rolling-token-usage.ts` controller, lifecycle refresh and cleanup; cached values only in render.
 - In-memory migration of old context-bearing layouts; explicit `segmentText.usage24h` prevents reinsertion when hidden. Empty/no-context layouts stay untouched. Integrated menu saves persist effective segments and the presentation marker.
 - Segment description and `/statusline help` guidance; default information profiles contain the new segment.

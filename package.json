@@ -5,7 +5,7 @@
     "type": "git",
     "url": "https://github.com/Qser3ne/pi-qser3ne-patch.git"
   },
-  "description": "Unified Pi extension for Codex accounts, Fast mode, Daybreak Blue, subscription quotas, token speed and rolling 24-hour statusline usage.",
+  "description": "Unified Pi extension for Codex accounts, Fast mode, Daybreak Blue, subscription quotas, token speed and today statusline usage.",
   "type": "module",
   "private": true,
   "keywords": [
