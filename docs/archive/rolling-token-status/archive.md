@@ -2,7 +2,7 @@
 
 ## Purpose
 
-定义统一 TUI 状态栏中的滚动近 24 小时 token 总量、缓存命中率及其配置和生命周期边界。
+定义统一 TUI 状态栏中本机时区今日零点至当前的 token 总量、缓存命中率及其配置和生命周期边界。
 
 ## Requirements
 
@@ -16,9 +16,9 @@
 - **THEN** SHALL 保留现有状态栏配置和其他能力的状态项，提供 /statusline
 - **AND** MUST 不额外注册 /token 或 /token-usage，独立查询扩展可继续提供这些命令
 
-### Requirement: 当前模型列表的滚动窗口
+### Requirement: 当前模型列表的今日窗口
 
-统计 SHALL 聚合本机跨项目、跨会话的已保存历史，使用查询时刻之前 24 小时的滚动窗口，范围两端包含在内；模型范围 SHALL 使用 scopedModels，空列表时使用 modelRegistry.getAvailable()。统计本身 MUST 不请求模型服务、不调用服务商账单或认证刷新接口；数值 MUST 不被描述为跨机器总量或远端账单。
+统计 SHALL 聚合本机跨项目、跨会话的已保存历史，使用运行 Pi 的本机时区今日 00:00 至查询开始时刻的日历日窗口，范围两端包含在内；零点 SHALL 按本地日历计算，包括夏令时变化，MUST 不用固定 24 小时回退替代。模型范围 SHALL 使用 scopedModels，空列表时使用 modelRegistry.getAvailable()。统计本身 MUST 不请求模型服务、不调用服务商账单或认证刷新接口；数值 MUST 不被描述为跨机器总量或远端账单。
 
 #### Scenario: 查询跨会话用量
 
@@ -27,9 +27,15 @@
 - **AND** SHALL 使用固定截止时刻，不把查询开始后的记录加入该次结果
 - **AND** SHALL 沿用固定统计模块的重叠根去重、复制/分叉历史去重、子代理用量协调规则，不把父汇总与已覆盖的子记录重复相加
 
+#### Scenario: 今日边界与跨日
+
+- **WHEN** 扫描已保存历史或日期跨过本地午夜后再次刷新
+- **THEN** SHALL 仅累计本次查询所在本地日历日零点及之后、固定截止时刻及之前的记录
+- **AND** token 总量与缓存率 SHALL 使用同一窗口，昨日及未来记录 MUST 不参与两项统计
+
 ### Requirement: 总量和缓存率显示
 
-原生段名 SHALL 为 usage24h，默认仅以一个 📊 图标作前缀，显示例如 `📊 12.3M CH 85.2%`，MUST 不额外显示 24h 文字。总量 SHALL 使用报告 totalTokens，按 K/M/B 紧凑格式显示；缓存率 SHALL 使用窗口总 cacheRead / (input + cacheRead + cacheWrite)，显示一位小数，MUST 不把输出加入分母或平均每条消息的命中率。
+原生段名 SHALL 保留 usage24h 以兼容已有配置，菜单及帮助 SHALL 描述今日零点至当前的统计范围，默认仅以一个 📊 图标作前缀，显示例如 `📊 12.3M CH 85.2%`，MUST 不额外显示 24h 文字。总量 SHALL 使用报告 totalTokens，按 K/M/B 紧凑格式显示；缓存率 SHALL 使用窗口总 cacheRead / (input + cacheRead + cacheWrite)，显示一位小数，MUST 不把输出加入分母或平均每条消息的命中率。
 
 #### Scenario: 累计后展示
 
@@ -77,7 +83,7 @@
 
 #### Scenario: 空闲观察其他会话
 
-- **WHEN** 本会话无新轮次但其他会话增加用量，或已有记录离开近 24 小时窗口
+- **WHEN** 本会话无新轮次但其他会话增加用量，或本机日期跨过午夜
 - **THEN** SHALL 在后续周期刷新后反映新聚合结果
 
 ### Requirement: 缓存与独立安装边界
@@ -88,4 +94,5 @@
 
 - **WHEN** 本包运行或开发者修改开发副本
 - **THEN** 统计 SHALL 使用包内的固定统计模块，独立 /token 命令仍可复用同一磁盘快照
+- **AND** 独立 /token 24h 与 /token-usage SHALL 保持滚动近 24 小时语义，不随状态栏改为今日窗口
 - **AND** 已安装的固定 Git 副本 SHALL 只有在显式更新其来源并重载后才采用新实现

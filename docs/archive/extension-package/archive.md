@@ -18,7 +18,7 @@
 
 ### Requirement: 状态栏共存
 
-本包 SHALL 由内置的兼容状态栏统一管理 TUI footer；额度、Daybreak、速度及 Fast 等能力 SHALL 继续使用各自命名的扩展状态项。状态栏兼容及近 24h 统计 MUST 遵守 [rolling-token-status](../rolling-token-status/archive.md)。
+本包 SHALL 由内置的兼容状态栏统一管理 TUI footer；额度、Daybreak、速度及 Fast 等能力 SHALL 继续使用各自命名的扩展状态项。状态栏兼容及今日统计 MUST 遵守 [rolling-token-status](../rolling-token-status/archive.md)。
 
 #### Scenario: 多项状态同时存在
 
@@ -58,4 +58,4 @@
 #### Scenario: 查询某项能力的契约
 
 - **WHEN** 需要确定具体行为
-- **THEN** SHALL 使用 [Codex 账号](../codex-accounts/archive.md)、[Fast](../codex-fast/archive.md)、[原生额度](../native-subscription-usage/archive.md)、[Sub2API](../sub2api-usage/archive.md)、[内置 usage](../provider-usage/archive.md)、[Daybreak](../daybreak-blue/archive.md)、[速度](../token-speed/archive.md)、[herdr](../herdr-subagents/archive.md) 或 [近 24h 状态栏](../rolling-token-status/archive.md) 的对应要求
+- **THEN** SHALL 使用 [Codex 账号](../codex-accounts/archive.md)、[Fast](../codex-fast/archive.md)、[原生额度](../native-subscription-usage/archive.md)、[Sub2API](../sub2api-usage/archive.md)、[内置 usage](../provider-usage/archive.md)、[Daybreak](../daybreak-blue/archive.md)、[速度](../token-speed/archive.md)、[herdr](../herdr-subagents/archive.md) 或 [今日状态栏](../rolling-token-status/archive.md) 的对应要求
